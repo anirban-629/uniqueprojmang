@@ -143,14 +143,14 @@ function DroppableBoardColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col rounded-2xl border transition-all duration-150 p-3.5 backdrop-blur-sm min-h-[560px] ${
+      className={`flex flex-col h-full min-h-0 rounded-2xl border transition-all duration-150 p-3 backdrop-blur-sm ${
         isOver
           ? 'border-indigo-500/80 bg-indigo-950/20 ring-2 ring-indigo-500/40 shadow-xl shadow-indigo-500/10'
           : 'border-slate-800/80 bg-slate-900/30'
       }`}
     >
-      {/* Column Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
+      {/* Column Header (Pinned) */}
+      <div className="shrink-0 flex items-center justify-between pb-2.5 border-b border-slate-800/80 mb-2.5">
         <div className="flex items-center gap-2">
           <Icon className={`h-4 w-4 ${col.color}`} />
           <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
@@ -162,8 +162,8 @@ function DroppableBoardColumn({
         </span>
       </div>
 
-      {/* Column Body */}
-      <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[calc(100vh-280px)] pr-1">
+      {/* Column Cards Body (Independently Scrollable) */}
+      <div className="flex-1 min-h-0 space-y-2.5 overflow-y-auto pr-1.5 scrollbar-thin">
         {issues.length === 0 ? (
           <div
             className={`flex h-40 flex-col items-center justify-center rounded-xl border border-dashed text-xs transition-colors ${
@@ -350,9 +350,9 @@ export function BoardClient({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Board Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+    <div className="flex-1 flex flex-col min-h-0 h-full space-y-3">
+      {/* Board Header & Controls (shrink-0) */}
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-extrabold tracking-tight text-white">{activeSprint?.name || 'Sprint 41'}</h1>
@@ -360,7 +360,7 @@ export function BoardClient({
               Active Sprint
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-400 mt-0.5">
             Goal: {activeSprint?.goal || 'Scale board & backlog virtualization'} &bull; {filteredIssues.length} tickets visible
           </p>
         </div>
@@ -391,8 +391,8 @@ export function BoardClient({
         </div>
       </div>
 
-      {/* Filter Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800/80 bg-slate-900/40 p-2.5 backdrop-blur-sm">
+      {/* Filter Toolbar (shrink-0) */}
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-slate-800/80 bg-slate-900/40 p-2.5 backdrop-blur-sm">
         <div className="flex flex-wrap items-center gap-2 flex-1">
           <div className="relative min-w-[200px] flex-1 max-w-xs">
             <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500" />
@@ -437,23 +437,25 @@ export function BoardClient({
         </div>
       </div>
 
-      {/* Kanban Drag and Drop Context */}
+      {/* Kanban Drag and Drop Context (flex-1 min-h-0) */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start min-h-[680px]">
-          {COLUMNS.map((col) => (
-            <DroppableBoardColumn
-              key={col.id}
-              col={col}
-              issues={columnIssues[col.id] || []}
-              users={users}
-              onSelectIssue={(issue) => setSelectedIssue(issue)}
-            />
-          ))}
+        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden pb-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 h-full min-h-0 min-w-[960px] items-stretch">
+            {COLUMNS.map((col) => (
+              <DroppableBoardColumn
+                key={col.id}
+                col={col}
+                issues={columnIssues[col.id] || []}
+                users={users}
+                onSelectIssue={(issue) => setSelectedIssue(issue)}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Floating Drag Overlay */}

@@ -92,9 +92,9 @@ export function BacklogClient({
   const totalEstimate = latestPage.totalEstimate || 25000;
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+    <div className="flex-1 flex flex-col min-h-0 h-full space-y-3">
+      {/* Header (shrink-0) */}
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-extrabold tracking-tight text-white">Backlog &bull; {project.name}</h1>
@@ -102,7 +102,7 @@ export function BacklogClient({
               {totalEstimate.toLocaleString()} Issues
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-400 mt-0.5">
             Virtualized windowing with cursor pagination. Smooth 60fps scrolling across 50,000 indexed tickets.
           </p>
         </div>
@@ -121,8 +121,8 @@ export function BacklogClient({
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800/80 bg-slate-900/40 p-2.5 backdrop-blur-sm">
+      {/* Filter Bar (shrink-0) */}
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-slate-800/80 bg-slate-900/40 p-2.5 backdrop-blur-sm">
         <div className="flex flex-wrap items-center gap-2 flex-1">
           <div className="relative min-w-[220px] flex-1 max-w-sm">
             <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500" />
@@ -168,10 +168,10 @@ export function BacklogClient({
         </div>
       </div>
 
-      {/* Virtualized List Container */}
+      {/* Virtualized List Container (flex-1 min-h-0) */}
       <div
         ref={parentRef}
-        className="h-[640px] overflow-auto rounded-xl border border-slate-800 bg-slate-950/40 backdrop-blur-sm relative"
+        className="flex-1 min-h-0 overflow-auto rounded-xl border border-slate-800 bg-slate-950/40 backdrop-blur-sm relative scrollbar-thin"
       >
         <div
           style={{

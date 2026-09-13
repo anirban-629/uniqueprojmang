@@ -96,7 +96,7 @@ export function AppSidebar() {
   ];
 
   return (
-    <aside className="sticky top-14 h-[calc(100vh-3.5rem)] w-60 shrink-0 border-r border-slate-800 bg-slate-950/90 p-3 flex flex-col justify-between overflow-y-auto">
+    <aside className="h-full w-60 shrink-0 border-r border-slate-800 bg-slate-950/90 p-3 flex flex-col justify-between overflow-y-auto select-none">
       <div className="space-y-6">
         {navItems.map((group) => (
           <div key={group.label} className="space-y-1">
