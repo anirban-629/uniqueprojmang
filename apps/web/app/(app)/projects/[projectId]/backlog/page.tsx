@@ -1,6 +1,6 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { mockDb } from '@flowline/mock-db';
+import { apiClient } from '@/lib/api';
 import { BacklogClient } from './backlog-client';
 
 export const dynamic = 'force-dynamic';
@@ -12,17 +12,14 @@ interface BacklogPageProps {
 export default async function BacklogPage({ params }: BacklogPageProps) {
   const { projectId } = await params;
 
-  const project = mockDb.getProject(projectId);
+  const [project, sprints, users, initialPage] = await Promise.all([
+    apiClient.getProject(projectId),
+    apiClient.getSprints(projectId),
+    apiClient.getUsers(),
+    apiClient.queryIssues({ projectId, limit: 50 })
+  ]);
+
   if (!project) notFound();
-
-  const sprints = mockDb.getSprints(projectId);
-  const users = mockDb.getUsers();
-
-  // Initial cursor page fetch in Server Component (Instant first paint)
-  const initialPage = mockDb.queryIssues({
-    projectId,
-    limit: 50
-  });
 
   return (
     <div className="flex-1 flex flex-col min-h-0">

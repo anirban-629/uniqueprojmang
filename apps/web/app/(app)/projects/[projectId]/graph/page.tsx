@@ -1,7 +1,9 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { mockDb } from '@flowline/mock-db';
+import { apiClient } from '@/lib/api';
 import { GraphWrapper } from './graph-wrapper';
+
+export const dynamic = 'force-dynamic';
 
 interface GraphPageProps {
   params: Promise<{ projectId: string }>;
@@ -9,14 +11,12 @@ interface GraphPageProps {
 
 export default async function GraphPage({ params }: GraphPageProps) {
   const { projectId } = await params;
-  const project = mockDb.getProject(projectId);
-  if (!project) notFound();
+  const [project, issuesResponse] = await Promise.all([
+    apiClient.getProject(projectId),
+    apiClient.queryIssues({ projectId, limit: 60 })
+  ]);
 
-  // Load a representative sample for graph exploration
-  const issuesResponse = mockDb.queryIssues({
-    projectId,
-    limit: 60
-  });
+  if (!project) notFound();
 
   return (
     <div className="space-y-4">

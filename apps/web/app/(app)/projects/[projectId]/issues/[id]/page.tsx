@@ -1,6 +1,6 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { mockDb } from '@flowline/mock-db';
+import { apiClient } from '@/lib/api';
 import { PriorityBadge, StatusBadge, TypeBadge, Avatar, Button } from '@flowline/ui';
 import { IssueDetailDrawer } from '@/components/issues/issue-detail-drawer';
 import Link from 'next/link';
@@ -14,16 +14,17 @@ interface IssuePageProps {
 
 export default async function IssuePage({ params }: IssuePageProps) {
   const { projectId, id } = await params;
-  const project = mockDb.getProject(projectId);
-  if (!project) notFound();
+  const [project, issue, users, comments] = await Promise.all([
+    apiClient.getProject(projectId),
+    apiClient.getIssue(id),
+    apiClient.getUsers(),
+    apiClient.getComments(id)
+  ]);
 
-  const issue = mockDb.getIssue(id);
-  if (!issue) notFound();
+  if (!project || !issue) notFound();
 
-  const users = mockDb.getUsers();
   const assignee = users.find(u => u.id === issue.assigneeId);
   const reporter = users.find(u => u.id === issue.reporterId);
-  const comments = mockDb.getComments(issue.id);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">

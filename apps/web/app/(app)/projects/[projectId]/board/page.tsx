@@ -1,6 +1,6 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { mockDb } from '@flowline/mock-db';
+import { apiClient } from '@/lib/api';
 import { BoardClient } from './board-client';
 
 export const dynamic = 'force-dynamic';
@@ -12,18 +12,21 @@ interface BoardPageProps {
 export default async function BoardPage({ params }: BoardPageProps) {
   const { projectId } = await params;
 
-  // Server Component first-paint fetch (eliminates loading spinner)
-  const project = mockDb.getProject(projectId);
+  // Server Component first-paint fetch from backend API
+  const [project, sprints, users] = await Promise.all([
+    apiClient.getProject(projectId),
+    apiClient.getSprints(projectId),
+    apiClient.getUsers()
+  ]);
+
   if (!project) {
     notFound();
   }
 
-  const sprints = mockDb.getSprints(projectId);
   const activeSprint = sprints.find(s => s.status === 'active') || sprints[0];
-  const users = mockDb.getUsers();
 
-  // Initial slice of sprint issues from server (Server Component pre-hydration)
-  const initialIssuesResponse = mockDb.queryIssues({
+  // Initial slice of sprint issues from backend API
+  const initialIssuesResponse = await apiClient.queryIssues({
     projectId,
     sprintId: activeSprint?.id,
     limit: 100

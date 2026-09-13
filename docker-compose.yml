@@ -1,0 +1,81 @@
+# ==============================================================================
+# FLOWLINE — OPTIONAL LOCAL OFFLINE DEVELOPMENT ONLY
+# ==============================================================================
+# NOTE: DO NOT DEPLOY THIS TO THE CLOUD!
+# Cloud Docker hosting costs $20-$60+/month.
+# Flowline's production deployment runs 100% FREE ($0/month) on:
+#   - Supabase / Neon (Free Postgres 16 + RLS + Connection Pooling)
+#   - Vercel (Free Next.js 15 App Router & API Route Handlers)
+#   - Upstash (Free Serverless Redis for Rate Limiting)
+#   - Inngest (Free Serverless Event-Driven Background Jobs)
+#   - Cloudflare R2 (Free 10GB S3 Object Storage, $0 Egress)
+#
+# Use this compose file ONLY on your local machine if you want an offline sandbox.
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: flowline-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: flowline
+      POSTGRES_PASSWORD: flowline_secret
+      POSTGRES_DB: flowline_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowline -d flowline_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: flowline-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: flowline-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio_admin
+      MINIO_ROOT_PASSWORD: minio_secret_key
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  # Optional offline Swagger UI previewer
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: flowline-swagger-ui
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SWAGGER_JSON: /spec/openapi.json
+    volumes:
+      - ./packages/types/src:/spec:ro
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

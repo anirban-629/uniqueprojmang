@@ -1,5 +1,5 @@
 import React from 'react';
-import { mockDb } from '@flowline/mock-db';
+import { apiClient } from '@/lib/api';
 import { 
   ShieldCheck, 
   TrendingUp, 
@@ -18,8 +18,8 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 export default async function WeatherMapPage() {
-  // Pre-aggregated server-side fetch (0 raw issue computing on client!)
-  const teams = mockDb.getWeatherMapSummaries();
+  // Pre-aggregated server-side fetch from standalone API
+  const teams = await apiClient.getWeatherMapSummaries();
 
   return (
     <div className="space-y-6">

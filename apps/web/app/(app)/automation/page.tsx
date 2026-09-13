@@ -1,12 +1,12 @@
 import React from 'react';
-import { mockDb } from '@flowline/mock-db';
+import { apiClient } from '@/lib/api';
 import { Cpu, Zap, CheckCircle2, Play, Plus, Clock } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@flowline/ui';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AutomationPage() {
-  const automations = mockDb.getAutomations('proj-flow');
+  const automations = await apiClient.getAutomations('proj-flow');
 
   return (
     <div className="space-y-6">

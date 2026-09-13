@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { mockDb } from '@flowline/mock-db';
+import { apiClient } from '@/lib/api';
 import { 
   Layers, 
   Kanban, 
@@ -16,14 +16,18 @@ import {
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '@flowline/ui';
 
+export const dynamic = 'force-dynamic';
+
 // Server Component (Default)
 export default async function DashboardPage() {
-  // Direct server-side data extraction (Zero client fetch waterfall)
-  const projects = mockDb.getProjects();
-  const weather = mockDb.getWeatherMapSummaries();
-  const sprints = mockDb.getSprints('proj-flow');
+  // Fetch from standalone backend API
+  const [projects, weather, sprints, decisions] = await Promise.all([
+    apiClient.getProjects(),
+    apiClient.getWeatherMapSummaries(),
+    apiClient.getSprints('proj-flow'),
+    apiClient.getDecisions('proj-flow')
+  ]);
   const activeSprint = sprints.find(s => s.status === 'active') || sprints[0];
-  const decisions = mockDb.getDecisions('proj-flow');
 
   return (
     <div className="space-y-8">

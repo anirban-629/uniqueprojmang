@@ -1,6 +1,6 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { mockDb } from '@flowline/mock-db';
+import { apiClient } from '@/lib/api';
 import { BookOpen, CheckCircle2, AlertCircle, FileText, ArrowRight } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '@flowline/ui';
 import Link from 'next/link';
@@ -13,10 +13,12 @@ interface DecisionsPageProps {
 
 export default async function DecisionsPage({ params }: DecisionsPageProps) {
   const { projectId } = await params;
-  const project = mockDb.getProject(projectId);
-  if (!project) notFound();
+  const [project, decisions] = await Promise.all([
+    apiClient.getProject(projectId),
+    apiClient.getDecisions(projectId)
+  ]);
 
-  const decisions = mockDb.getDecisions(projectId);
+  if (!project) notFound();
 
   return (
     <div className="space-y-6">

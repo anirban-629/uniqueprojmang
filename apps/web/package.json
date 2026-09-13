@@ -14,7 +14,6 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@flowline/hooks": "*",
-    "@flowline/mock-db": "*",
     "@flowline/types": "*",
     "@flowline/ui": "*",
     "@tanstack/react-query": "^5.66.0",
