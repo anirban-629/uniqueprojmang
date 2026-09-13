@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Project, Sprint, Issue, User, IssueStatus, IssuePriority } from '@flowline/types';
+import { Project, Sprint, Issue, User, IssueStatus } from '@flowline/types';
 import { useBoardMutation, useRealtimeUpdates } from '@flowline/hooks';
 import { PriorityBadge, TypeBadge, Avatar, Button, Input } from '@flowline/ui';
 import { IssueDetailDrawer } from '@/components/issues/issue-detail-drawer';
 import { 
   Plus, 
   Search, 
-  Filter, 
   AlertTriangle, 
   Sparkles, 
   CheckCircle2, 
@@ -19,14 +18,17 @@ import {
 } from 'lucide-react';
 import {
   DndContext,
-  closestCenter,
+  closestCorners,
   PointerSensor,
   useSensor,
   useSensors,
   DragEndEvent,
   DragStartEvent,
-  DragOverlay
+  DragOverlay,
+  useDroppable,
+  useDraggable
 } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 
 interface BoardClientProps {
   project: Project;
@@ -43,6 +45,154 @@ const COLUMNS: { id: IssueStatus; title: string; icon: any; color: string }[] = 
   { id: 'done', title: 'Done', icon: CheckCircle2, color: 'border-emerald-500/40 text-emerald-400' }
 ];
 
+// --- Draggable Card Component ---
+function DraggableBoardCard({
+  issue,
+  assignee,
+  onSelect
+}: {
+  issue: Issue;
+  assignee?: User;
+  onSelect: (issue: Issue) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging
+  } = useDraggable({
+    id: issue.id,
+    data: { issue }
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.35 : 1,
+    touchAction: 'none'
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={(e) => {
+        // Only open detail drawer if user clicked, not during drag
+        if (!isDragging) {
+          onSelect(issue);
+        }
+      }}
+      className={`group relative cursor-grab active:cursor-grabbing rounded-xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm hover:border-indigo-500/50 hover:bg-slate-900/95 transition-all select-none ${
+        isDragging ? 'ring-2 ring-indigo-500 shadow-xl' : ''
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-1.5">
+          <GripVertical className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition-colors" />
+          <TypeBadge type={issue.type} />
+          <span className="font-mono text-[11px] font-bold text-slate-400">
+            {issue.key}
+          </span>
+        </div>
+        <PriorityBadge priority={issue.priority} />
+      </div>
+
+      <h4 className="text-xs font-medium text-slate-200 line-clamp-2 leading-relaxed group-hover:text-indigo-300 transition-colors">
+        {issue.title}
+      </h4>
+
+      <div className="mt-3 flex items-center justify-between border-t border-slate-800/60 pt-2 text-[11px] text-slate-400">
+        <div className="flex items-center gap-1.5">
+          <Avatar
+            name={assignee?.name || 'Unassigned'}
+            avatar={assignee?.avatar}
+            size="xs"
+          />
+          <span className="truncate max-w-[90px]">{assignee?.name.split(' ')[0] || 'None'}</span>
+        </div>
+
+        <span className="font-semibold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">
+          {issue.storyPoints ?? 0} pts
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// --- Droppable Column Component ---
+function DroppableBoardColumn({
+  col,
+  issues,
+  users,
+  onSelectIssue
+}: {
+  col: typeof COLUMNS[number];
+  issues: Issue[];
+  users: User[];
+  onSelectIssue: (issue: Issue) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: col.id,
+    data: { status: col.id }
+  });
+
+  const Icon = col.icon;
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex flex-col rounded-2xl border transition-all duration-150 p-3.5 backdrop-blur-sm min-h-[560px] ${
+        isOver
+          ? 'border-indigo-500/80 bg-indigo-950/20 ring-2 ring-indigo-500/40 shadow-xl shadow-indigo-500/10'
+          : 'border-slate-800/80 bg-slate-900/30'
+      }`}
+    >
+      {/* Column Header */}
+      <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
+        <div className="flex items-center gap-2">
+          <Icon className={`h-4 w-4 ${col.color}`} />
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
+            {col.title}
+          </span>
+        </div>
+        <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-bold text-slate-400">
+          {issues.length}
+        </span>
+      </div>
+
+      {/* Column Body */}
+      <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[calc(100vh-280px)] pr-1">
+        {issues.length === 0 ? (
+          <div
+            className={`flex h-40 flex-col items-center justify-center rounded-xl border border-dashed text-xs transition-colors ${
+              isOver
+                ? 'border-indigo-500/60 bg-indigo-500/10 text-indigo-300 font-semibold'
+                : 'border-slate-800 text-slate-600'
+            }`}
+          >
+            <span>{isOver ? `Release to move to ${col.title}` : 'Drop cards here'}</span>
+          </div>
+        ) : (
+          issues.map((issue) => {
+            const assignee = users.find(u => u.id === issue.assigneeId);
+            return (
+              <DraggableBoardCard
+                key={issue.id}
+                issue={issue}
+                assignee={assignee}
+                onSelect={onSelectIssue}
+              />
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- Main Board Component ---
 export function BoardClient({
   project,
   sprints,
@@ -50,14 +200,13 @@ export function BoardClient({
   initialIssues,
   users
 }: BoardClientProps) {
-  // Local state initialized with Server Component pre-hydration
   const [issues, setIssues] = useState<Issue[]>(initialIssues);
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
   const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
   const [chaosMode, setChaosMode] = useState(false);
-  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [activeDragIssue, setActiveDragIssue] = useState<Issue | null>(null);
   const [isNewIssueOpen, setIsNewIssueOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
 
@@ -66,11 +215,11 @@ export function BoardClient({
   // Optimistic board mutation hook
   const boardMutation = useBoardMutation();
 
-  // Pointer sensor for drag-and-drop
+  // Pointer sensor configured for smooth drag with 4px threshold
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5 // 5px drag activation to prevent accidental clicks
+        distance: 4
       }
     })
   );
@@ -111,20 +260,33 @@ export function BoardClient({
 
   // Drag handlers
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveDragId(String(event.active.id));
+    const issue = issues.find(i => i.id === event.active.id);
+    if (issue) {
+      setActiveDragIssue(issue);
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveDragId(null);
+    setActiveDragIssue(null);
 
     if (!over) return;
 
     const issueId = String(active.id);
-    const targetStatus = String(over.id) as IssueStatus;
+    const overId = String(over.id);
 
-    // Verify valid column status
-    if (!['todo', 'in_progress', 'in_review', 'done'].includes(targetStatus)) return;
+    // Identify target status: either over a column or over another card in that column
+    let targetStatus: IssueStatus | undefined;
+    if (['todo', 'in_progress', 'in_review', 'done'].includes(overId)) {
+      targetStatus = overId as IssueStatus;
+    } else {
+      const overIssue = issues.find(i => i.id === overId);
+      if (overIssue) {
+        targetStatus = overIssue.status;
+      }
+    }
+
+    if (!targetStatus) return;
 
     const existingIssue = issues.find(i => i.id === issueId);
     if (!existingIssue || existingIssue.status === targetStatus) return;
@@ -147,7 +309,7 @@ export function BoardClient({
           setIssues(prev =>
             prev.map(i => (i.id === issueId ? { ...i, status: existingIssue.status } : i))
           );
-          alert(`Optimistic update failed & reverted: ${err.message}`);
+          alert(`Optimistic update reverted: ${err.message}`);
         }
       }
     );
@@ -186,8 +348,6 @@ export function BoardClient({
       body: JSON.stringify(newIssue)
     });
   };
-
-  const activeDragIssue = issues.find(i => i.id === activeDragId);
 
   return (
     <div className="space-y-4">
@@ -271,106 +431,55 @@ export function BoardClient({
           </select>
         </div>
 
-        <div className="text-xs text-slate-400 font-medium">
-          Drag cards across columns for instant optimistic sync
+        <div className="text-xs text-indigo-300/80 font-medium flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+          <span>Drag any card by its handle to move across columns</span>
         </div>
       </div>
 
-      {/* Kanban Drag and Drop Columns */}
+      {/* Kanban Drag and Drop Context */}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start min-h-[680px]">
-          {COLUMNS.map((col) => {
-            const issuesInCol = columnIssues[col.id] || [];
-            const Icon = col.icon;
-
-            return (
-              <div
-                key={col.id}
-                id={col.id}
-                className="flex flex-col rounded-xl border border-slate-800 bg-slate-900/30 p-3 backdrop-blur-sm min-h-[500px]"
-              >
-                {/* Column Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
-                  <div className="flex items-center gap-2">
-                    <Icon className={`h-4 w-4 ${col.color}`} />
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                      {col.title}
-                    </span>
-                  </div>
-                  <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-bold text-slate-400">
-                    {issuesInCol.length}
-                  </span>
-                </div>
-
-                {/* Column Body Cards */}
-                <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[calc(100vh-280px)] pr-1">
-                  {issuesInCol.length === 0 ? (
-                    <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-slate-800/80 text-xs text-slate-600">
-                      Drop cards here
-                    </div>
-                  ) : (
-                    issuesInCol.map((issue) => {
-                      const assignee = users.find(u => u.id === issue.assigneeId);
-
-                      return (
-                        <div
-                          key={issue.id}
-                          id={issue.id}
-                          onClick={() => setSelectedIssue(issue)}
-                          className="group relative cursor-pointer rounded-xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm hover:border-indigo-500/50 hover:bg-slate-900 transition-all active:scale-[0.99]"
-                        >
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-1.5">
-                              <TypeBadge type={issue.type} />
-                              <span className="font-mono text-[11px] font-bold text-slate-400">
-                                {issue.key}
-                              </span>
-                            </div>
-                            <PriorityBadge priority={issue.priority} />
-                          </div>
-
-                          <h4 className="text-xs font-medium text-slate-200 line-clamp-2 leading-relaxed group-hover:text-indigo-300 transition-colors">
-                            {issue.title}
-                          </h4>
-
-                          <div className="mt-3 flex items-center justify-between border-t border-slate-800/60 pt-2 text-[11px] text-slate-400">
-                            <div className="flex items-center gap-1.5">
-                              <Avatar
-                                name={assignee?.name || 'Unassigned'}
-                                avatar={assignee?.avatar}
-                                size="xs"
-                              />
-                              <span className="truncate max-w-[90px]">{assignee?.name.split(' ')[0] || 'None'}</span>
-                            </div>
-
-                            <span className="font-semibold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">
-                              {issue.storyPoints ?? 0} pts
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {COLUMNS.map((col) => (
+            <DroppableBoardColumn
+              key={col.id}
+              col={col}
+              issues={columnIssues[col.id] || []}
+              users={users}
+              onSelectIssue={(issue) => setSelectedIssue(issue)}
+            />
+          ))}
         </div>
 
-        {/* Drag Overlay for smooth visual card following cursor */}
+        {/* Floating Drag Overlay */}
         <DragOverlay>
           {activeDragIssue ? (
-            <div className="rounded-xl border border-indigo-500/80 bg-slate-900 p-3.5 shadow-2xl scale-105 rotate-1 opacity-95">
+            <div className="w-72 cursor-grabbing rounded-xl border-2 border-indigo-500 bg-slate-900 p-4 shadow-2xl shadow-indigo-500/30 scale-105 rotate-1 opacity-95">
               <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="font-mono text-[11px] font-bold text-indigo-300">{activeDragIssue.key}</span>
+                <div className="flex items-center gap-1.5">
+                  <TypeBadge type={activeDragIssue.type} />
+                  <span className="font-mono text-[11px] font-bold text-indigo-300">
+                    {activeDragIssue.key}
+                  </span>
+                </div>
                 <PriorityBadge priority={activeDragIssue.priority} />
               </div>
-              <h4 className="text-xs font-semibold text-white line-clamp-2">{activeDragIssue.title}</h4>
+
+              <h4 className="text-xs font-semibold text-white line-clamp-2 leading-relaxed">
+                {activeDragIssue.title}
+              </h4>
+
+              <div className="mt-3 flex items-center justify-between border-t border-slate-800 pt-2 text-[11px] text-slate-400">
+                <span className="text-indigo-400 font-medium">Moving...</span>
+                <span className="font-semibold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">
+                  {activeDragIssue.storyPoints ?? 0} pts
+                </span>
+              </div>
             </div>
           ) : null}
         </DragOverlay>
