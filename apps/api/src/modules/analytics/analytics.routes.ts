@@ -1,41 +1,10 @@
 import { FastifyPluginAsync } from 'fastify';
-import { mockDb } from '@flowline/mock-db';
+import * as controller from './analytics.controller.js';
+import * as schemas from './analytics.schema.js';
+import { GetWeatherMapRoute, GetVelocityRoute } from './analytics.types.js';
 
 export const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
-  // Pre-aggregated Weather Map Summary (Section 1.9 - Materialized view representation)
-  const handleWeatherMap = async () => {
-    await mockDb.simulateNetwork();
-    return mockDb.getWeatherMapSummaries();
-  };
-
-  fastify.get('/api/analytics/weather-map', {
-    schema: {
-      tags: ['Analytics'],
-      summary: 'Get Org Weather Map Summary (Pre-Aggregated)',
-      description: 'Pre-aggregated cross-team velocity, blocker count, and team health scores.'
-    }
-  }, handleWeatherMap);
-
-  // Backward compatibility alias
-  fastify.get('/api/org/weather-map', {
-    schema: {
-      tags: ['Analytics'],
-      summary: 'Get Org Weather Map Summary (Legacy Alias)'
-    }
-  }, handleWeatherMap);
-
-  fastify.get('/api/analytics/velocity', {
-    schema: {
-      tags: ['Analytics'],
-      summary: 'Get Team Velocity Metrics'
-    }
-  }, async () => {
-    await mockDb.simulateNetwork();
-    return {
-      averageVelocity: 38.5,
-      trend: 'up',
-      completedPointsLast3Sprints: [34, 40, 42],
-      predictedCompletionDate: new Date(Date.now() + 14 * 86400000).toISOString()
-    };
-  });
+  fastify.get<GetWeatherMapRoute>('/api/analytics/weather-map', { schema: schemas.weatherMapSchema }, controller.getWeatherMap);
+  fastify.get<GetWeatherMapRoute>('/api/org/weather-map', { schema: schemas.legacyWeatherMapSchema }, controller.getWeatherMap);
+  fastify.get<GetVelocityRoute>('/api/analytics/velocity', { schema: schemas.velocitySchema }, controller.getVelocity);
 };
