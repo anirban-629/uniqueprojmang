@@ -33,7 +33,7 @@ Chosen option: **Option 3 (Modular Monolith with Domain Seams)**.
    - `realtime/`: SSE streams and in-memory ephemeral presence.
    - `automation/`: In-process rule evaluation and idempotency checks.
    - `ai/`: Async LLM API calls and background job queue.
-   - `integrations/`: Inbound/outbound webhooks and Cloudflare R2 storage URLs.
+   - `integrations/`: Inbound/outbound webhooks and Supabase storage URLs.
    - `analytics/`: Pre-aggregated health scores and velocity trends.
 2. **In-Process Domain EventBus:** Modules publish strongly typed events (`issue:created`, `issue:updated`, etc.). Downstream modules (`automation`, `realtime`, `analytics`) subscribe to events without importing internal core models.
 3. **Module Boundaries:** No module imports internal models or helpers of another module directly; all cross-domain communication uses exported public interfaces.

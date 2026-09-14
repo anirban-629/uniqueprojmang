@@ -62,7 +62,7 @@ BEGIN
     (acme_id, space_flow, 1, 'FLOW-1', 'Migrate backend to 100% free serverless architecture', 'Implement Supabase Postgres, Inngest serverless jobs, and Upstash Redis rate limiting', 'in_progress', 'urgent', 'story', user_alex, user_sarah, sprint_1, 8.0, '0|hzzzzz:', ARRAY['backend', 'scale', 'zero-cost'], '{"sla": "24h", "tier": "p0"}'::JSONB),
     (acme_id, space_flow, 2, 'FLOW-2', 'Integrate Swagger UI at /api/docs', 'Embed interactive OpenAPI 3.0 specification with JWT Bearer and tenant header testing', 'done', 'high', 'story', user_sarah, user_alex, sprint_1, 5.0, '0|i00000:', ARRAY['api', 'docs', 'swagger'], '{"swagger_version": "3.0"}'::JSONB),
     (acme_id, space_flow, 3, 'FLOW-3', 'Audit Row Level Security completeness on all tenant tables', 'Verify RESTRICTIVE policy behavior across company_memberships, spaces, sprints, and issues', 'todo', 'urgent', 'task', user_marcus, user_alex, sprint_1, 5.0, '0|i00001:', ARRAY['security', 'rls', 'postgres'], '{}'::JSONB),
-    (acme_id, space_flow, 4, 'FLOW-4', 'Configure Cloudflare R2 presigned upload URL generator', 'S3-compatible object storage with $0 egress fees for issue attachments', 'backlog', 'medium', 'story', user_alex, user_marcus, NULL, 3.0, '0|i00002:', ARRAY['storage', 'cloudflare-r2'], '{}'::JSONB)
+    (acme_id, space_flow, 4, 'FLOW-4', 'Configure Supabase Storage signed upload URL generator', 'S3-compatible object storage with RLS policies for issue attachments', 'backlog', 'medium', 'story', user_alex, user_marcus, NULL, 3.0, '0|i00002:', ARRAY['storage', 'supabase-storage'], '{}'::JSONB)
     ON CONFLICT (company_id, key) DO NOTHING;
 
     -- 8. Automation Rules

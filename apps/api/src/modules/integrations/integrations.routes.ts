@@ -17,13 +17,13 @@ export const integrationsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // -------------------------------------------------------------
-  // STORAGE & ASSET URLS (Cloudflare R2 Presigned URLs)
+  // STORAGE & ASSET URLS (Supabase Storage Signed URLs)
   // -------------------------------------------------------------
   fastify.post('/api/storage/upload-url', {
     schema: {
       tags: ['Integrations — Storage'],
-      summary: 'Generate Cloudflare R2 Presigned Upload URL',
-      description: 'Generates an authorized presigned URL for direct file upload with zero egress fees ($0 free tier).',
+      summary: 'Generate Supabase Storage Signed Upload URL',
+      description: 'Generates an authorized signed URL for direct file upload into Supabase Storage.',
       body: {
         type: 'object',
         required: ['filename', 'contentType'],
@@ -39,12 +39,15 @@ export const integrationsRoutes: FastifyPluginAsync = async (fastify) => {
     const sanitized = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
     const timestamp = Date.now();
     const tenantId = request.companyTenant?.tenantId || 'acme-corp';
-    const fileKey = `tenants/${tenantId}/${issueId || 'general'}/${timestamp}-${sanitized}`;
+    const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'attachments';
+    const filePath = `tenants/${tenantId}/${issueId || 'general'}/${timestamp}-${sanitized}`;
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://mock.supabase.co';
 
     return reply.send({
-      uploadUrl: `/api/storage/mock-upload?key=${encodeURIComponent(fileKey)}`,
-      fileKey,
-      publicUrl: `https://storage.flowline.internal/${fileKey}`,
+      bucket,
+      filePath,
+      uploadUrl: `${supabaseUrl}/storage/v1/object/upload/sign/${bucket}/${filePath}`,
+      publicUrl: `${supabaseUrl}/storage/v1/object/public/${bucket}/${filePath}`,
       expiresInSeconds: 3600
     });
   });

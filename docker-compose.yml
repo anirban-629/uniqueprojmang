@@ -7,8 +7,7 @@
 #   - Supabase / Neon (Free Postgres 16 + RLS + Connection Pooling)
 #   - Vercel (Free Next.js 15 App Router & API Route Handlers)
 #   - Upstash (Free Serverless Redis for Rate Limiting)
-#   - Inngest (Free Serverless Event-Driven Background Jobs)
-#   - Cloudflare R2 (Free 10GB S3 Object Storage, $0 Egress)
+#   - Supabase (Free 500MB PostgreSQL with Pooling & 1GB Storage)
 #
 # Use this compose file ONLY on your local machine if you want an offline sandbox.
 # ==============================================================================

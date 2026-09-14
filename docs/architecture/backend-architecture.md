@@ -42,7 +42,7 @@ apps/api/src/
     realtime/         # In-process events, SSE streams, ephemeral presence
     automation/       # Sandboxed rule evaluation, event listeners, idempotency
     ai/               # LLM API callers, async background job queue
-    integrations/     # Inbound/outbound webhooks, Cloudflare R2 storage URLs
+    integrations/     # Inbound/outbound webhooks, Supabase storage URLs
     analytics/        # Pre-aggregated health metrics & velocity trends
 ```
 
@@ -57,7 +57,7 @@ flowchart TD
         Realtime["modules/realtime<br/>SSE Streams & In-Memory Presence"]
         Auto["modules/automation<br/>Sandboxed Rule Evaluator"]
         AI["modules/ai<br/>Async LLM Job Queue"]
-        Integrations["modules/integrations<br/>Webhooks & R2 Storage URLs"]
+        Integrations["modules/integrations<br/>Webhooks & Supabase Storage URLs"]
         Analytics["modules/analytics<br/>Materialized Views & Weather Map"]
         
         EventBus["In-Process EventBus<br/>(eventBus.publish / subscribe)"]
@@ -68,10 +68,10 @@ flowchart TD
     EventBus -->|Async Event Dispatch| Auto
     EventBus -->|Async Event Dispatch| Analytics
 
-    API -->|RLS + JSONB| DB[(Supabase / Neon Postgres 16)]
+    API -->|RLS + JSONB| DB[(Supabase Postgres 16)]
     API -->|Sliding Window| Cache[(Upstash Redis Free Tier)]
     API -->|Async Jobs| Queue[(In-Process Queue / QStash)]
-    API -->|Presigned URLs| Storage[(Cloudflare R2 Storage)]
+    API -->|Signed URLs| Storage[(Supabase Storage)]
 ```
 
 ---
@@ -111,11 +111,11 @@ flowchart TD
 
 | Component | Free Provider | Free Tier Allowance | Purpose |
 |---|---|---|---|
-| **Database** | **Supabase / Neon** | 500 MB Postgres 16 + connection pooling | PostgreSQL with Row-Level Security (RLS) and tsvector search |
+| **Database** | **Supabase** | 500 MB Postgres 16 + connection pooling | PostgreSQL with Row-Level Security (RLS) and tsvector search |
 | **Compute / API** | **Fastify Monolith / Vercel** | Free tier web service / serverless | Single deployable backend monolith |
 | **API Documentation** | **Swagger UI / OpenAPI 3.0** | Built-in via `@fastify/swagger` | Hosted at `/docs` with interactive JWT testing |
 | **Cache & Rate Limit** | **Upstash Redis** | 10,000 commands/day via REST | Multi-tenant sliding window rate limiter |
-| **Storage** | **Cloudflare R2** | 10 GB storage + $0 egress | Attachment uploads via presigned URLs |
+| **Storage** | **Supabase Storage** | 1 GB storage + RLS access control | Attachment uploads via signed URLs |
 | **Async Jobs** | **In-Process Queue / Upstash QStash** | Free tier | Asynchronous AI jobs and automation execution |
 
 ---

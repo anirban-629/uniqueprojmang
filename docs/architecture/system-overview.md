@@ -16,15 +16,15 @@ flowchart TB
         Realtime["realtime/ — SSE Stream & Presence"]
         Auto["automation/ — Sandboxed Rule Evaluator"]
         AI["ai/ — Async LLM Job Queue"]
-        Integrations["integrations/ — Webhooks & R2 Storage"]
+        Integrations["integrations/ — Webhooks & Supabase Storage"]
         Analytics["analytics/ — Weather Map & Velocity Rollups"]
         EventBus["In-Process EventBus (events/)"]
     end
 
     subgraph DataServices["Free-Tier Cloud Infrastructure ($0/Mo)"]
-        Postgres[(Supabase / Neon Postgres 16<br/>RLS Multi-Tenancy & GIN Indexes)]
+        Postgres[(Supabase Postgres 16<br/>RLS Multi-Tenancy & GIN Indexes)]
         Redis[(Upstash Redis<br/>Sliding Window Rate Limiting)]
-        Storage[(Cloudflare R2<br/>S3-Compatible Zero-Egress Storage)]
+        Storage[(Supabase Storage<br/>S3-Compatible Object Storage with RLS)]
     end
 
     subgraph SharedPackages["Turborepo Shared Packages (packages/*)"]

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
@@ -11,6 +12,7 @@ import { automationRoutes } from './modules/automation/index.js';
 import { aiRoutes } from './modules/ai/index.js';
 import { integrationsRoutes } from './modules/integrations/index.js';
 import { analyticsRoutes } from './modules/analytics/index.js';
+import { checkDatabaseHealth } from './db/client.js';
 
 const server = Fastify({
   logger: true,
@@ -77,14 +79,109 @@ async function main() {
   // 4. Multi-Tenant Context & Rate Limiting Plugin
   await server.register(tenancyPlugin);
 
-  // 5. Health Check
-  server.get('/health', async () => ({
-    status: 'ok',
-    service: '@flowline/api (modular monolith)',
-    port: 4000,
-    cost: '$0/month',
-    uptime: process.uptime()
-  }));
+  // 5. Formal Deep Health Check (Database, Supabase Storage, Redis, Memory)
+  const healthHandler = async (_request: any, reply: any) => {
+    const timestamp = new Date().toISOString();
+    const uptimeSeconds = Math.floor(process.uptime());
+
+    // 1. PostgreSQL Database Check
+    const dbHealth = await checkDatabaseHealth();
+
+    // 2. Supabase Storage Check
+    const storageStart = Date.now();
+    let storageHealth: { status: 'healthy' | 'unhealthy' | 'unconfigured'; latencyMs?: number; bucket?: string; error?: string } = {
+      status: 'unconfigured'
+    };
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+    const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'flowline-attachments';
+
+    if (supabaseUrl && secretKey) {
+      try {
+        const res = await fetch(`${supabaseUrl}/storage/v1/bucket`, {
+          headers: {
+            'apikey': secretKey,
+            'Authorization': `Bearer ${secretKey}`
+          }
+        });
+        const latencyMs = Date.now() - storageStart;
+        if (res.ok) {
+          storageHealth = { status: 'healthy', latencyMs, bucket };
+        } else {
+          storageHealth = { status: 'unhealthy', latencyMs, error: `HTTP ${res.status}: ${res.statusText}` };
+        }
+      } catch (err: any) {
+        storageHealth = { status: 'unhealthy', latencyMs: Date.now() - storageStart, error: err.message };
+      }
+    }
+
+    // 3. Upstash Redis Check (if configured)
+    const redisStart = Date.now();
+    let redisHealth: { status: 'healthy' | 'unhealthy' | 'unconfigured'; latencyMs?: number; error?: string } = {
+      status: 'unconfigured'
+    };
+
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    if (redisUrl && redisToken) {
+      try {
+        const res = await fetch(`${redisUrl}/ping`, {
+          headers: {
+            'Authorization': `Bearer ${redisToken}`
+          }
+        });
+        const latencyMs = Date.now() - redisStart;
+        if (res.ok) {
+          redisHealth = { status: 'healthy', latencyMs };
+        } else {
+          redisHealth = { status: 'unhealthy', latencyMs, error: `HTTP ${res.status}` };
+        }
+      } catch (err: any) {
+        redisHealth = { status: 'unhealthy', latencyMs: Date.now() - redisStart, error: err.message };
+      }
+    }
+
+    const isHealthy = dbHealth.status === 'healthy';
+    const overallStatus = isHealthy ? 'healthy' : 'unhealthy';
+
+    const memoryUsage = process.memoryUsage();
+    const payload = {
+      status: overallStatus,
+      timestamp,
+      uptimeSeconds,
+      environment: process.env.NODE_ENV || 'development',
+      services: {
+        database: dbHealth,
+        storage: storageHealth,
+        redis: redisHealth
+      },
+      system: {
+        nodeVersion: process.version,
+        memoryRssMb: Math.round((memoryUsage.rss / 1024 / 1024) * 10) / 10,
+        memoryHeapUsedMb: Math.round((memoryUsage.heapUsed / 1024 / 1024) * 10) / 10
+      }
+    };
+
+    return reply.status(isHealthy ? 200 : 503).send(payload);
+  };
+
+  server.get('/health', {
+    schema: {
+      tags: ['System & Health'],
+      summary: 'Comprehensive System & Infrastructure Health Check',
+      description: 'Performs live, non-destructive connectivity verification against Supabase Postgres, Supabase Storage, and Upstash Redis.'
+    }
+  }, healthHandler);
+
+  server.get('/api/health', {
+    schema: {
+      tags: ['System & Health'],
+      summary: 'Comprehensive System & Infrastructure Health Check (API Prefix)',
+      description: 'Performs live, non-destructive connectivity verification against Supabase Postgres, Supabase Storage, and Upstash Redis.'
+    }
+  }, healthHandler);
 
   // 6. Register 8 Domain Modules
   await server.register(authRoutes);
