@@ -11,8 +11,9 @@ out/
 build
 dist
 
-# Turborepo
+# Turborepo & TypeScript
 .turbo
+*.tsbuildinfo
 
 # Debug logs
 npm-debug.log*

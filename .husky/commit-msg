@@ -1,1 +1,40 @@
-npx --no -- commitlint --edit "$1"
+#!/usr/bin/env sh
+commit_msg_file="$1"
+commit_msg="$(cat "$commit_msg_file")"
+
+# Ignore merge commits and automated rebase messages
+if echo "$commit_msg" | grep -qE '^(Merge|Rebase)'; then
+  exit 0
+fi
+
+# Allowed Types
+allowed_types="FEAT|FIX|DOCS|STYLE|REFACTOR|PERF|TEST|BUILD|CI|CHORE|REVERT|DEPS"
+
+# Valid Format: [TYPE](scope): subject  OR  [TYPE]: subject
+pattern="^\[($allowed_types)\](\([a-zA-Z0-9_-]+\))?: .+"
+
+if ! echo "$commit_msg" | grep -qE "$pattern"; then
+  echo ""
+  echo "❌ FAILED: Invalid commit message format!"
+  echo "--------------------------------------------------"
+  echo "Expected: [TYPE](scope): <message>  or  [TYPE]: <message>"
+  echo ""
+  echo "Allowed TYPES:"
+  echo "  FEAT, FIX, DOCS, STYLE, REFACTOR, PERF, TEST, BUILD, CI, CHORE, REVERT, DEPS"
+  echo ""
+  echo "Recommended SCOPES:"
+  echo "  Apps:          web, api, admin, service-desk"
+  echo "  Microservices: auth-svc, notify-svc, worker-svc, realtime-svc"
+  echo "  Packages:      ui, types, hooks, mock-db, db, config"
+  echo "  Global:        root, docs, ci, deps, infra"
+  echo ""
+  echo "Examples:"
+  echo "  [FEAT](web): add board virtualization"
+  echo "  [FIX](api): resolve tenant isolation in issue query"
+  echo "  [FEAT](auth-svc): add JWT token refresh handler"
+  echo "  [CHORE](types): sync OpenAPI DTOs"
+  echo "  [DOCS](architecture): update system overview diagram"
+  echo "--------------------------------------------------"
+  echo ""
+  exit 1
+fi
