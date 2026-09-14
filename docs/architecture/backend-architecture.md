@@ -11,22 +11,51 @@
 
 ---
 
-## 1. Phase 0: Tenancy Model
+## 1. Phase 0: Tenancy & Database Model
 
-* **Model:** Pooled multi-tenancy — all companies share tables, strictly isolated by `tenant_id`.
-* **Enforcement:** `tenant_id` column present on every table (including junction and audit tables).
-* **PostgreSQL Row-Level Security (RLS):** Policies are enforced at the database layer so application bugs cannot leak cross-tenant data even if an application query omits `WHERE tenant_id = ?`:
+* **Model:** Pooled multi-tenancy — all tenants share tables, strictly isolated by `tenant_id`.
+* **Enforcement:** `tenant_id` column present on every table (including junction, metadata, and audit tables).
+* **PostgreSQL Row-Level Security (RLS):** Policies are enforced at the database engine level with `FORCE ROW LEVEL SECURITY` so application bugs cannot leak cross-tenant data even if an application query omits `WHERE tenant_id = ?`:
 
 ```sql
--- Enable RLS
+-- Enable & Force RLS for all connections (including poolers)
 ALTER TABLE issues ENABLE ROW LEVEL SECURITY;
+ALTER TABLE issues FORCE ROW LEVEL SECURITY;
 
 -- Enforce tenant isolation via current session setting
-CREATE POLICY tenant_isolation_policy ON issues
+CREATE POLICY tenant_isolation_issues ON issues
     AS RESTRICTIVE
-    USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), ''))
-    WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), ''));
+    USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::UUID)
+    WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::UUID);
 ```
+
+### 1.1 Modular Schema Architecture (`packages/db/schemas/`)
+
+The database is structured as 11 self-contained, idempotent domain migration modules:
+
+| Order | Module File | Managed Entities & Purpose |
+| :--- | :--- | :--- |
+| `00` | `00_extensions_and_helpers.sql` | `uuid-ossp`, `pgcrypto`, `pg_trgm`, `set_updated_at()` trigger |
+| `01` | `01_auth_and_tenancy.sql` | `tenants`, `users` profile, `tenant_members` & tenant membership RLS |
+| `02` | `02_projects.sql` | `projects`, `project_members` & project-level RLS |
+| `03` | `03_issue_taxonomy.sql` | `issue_types` (hierarchies 0, 1, 2), `issue_statuses`, `priorities` & RLS |
+| `04` | `04_sprints.sql` | `sprints` & sprint planning RLS |
+| `05` | `05_tickets.sql` | `issues`, auto-key trigger (`generate_issue_key`), search vector trigger (`sync_issue_search_vector`), hierarchy validation trigger (`validate_issue_hierarchy`) |
+| `06` | `06_collaboration.sql` | `issue_links`, `labels`, `issue_labels`, `issue_watchers`, `comments`, `attachments` |
+| `07` | `07_activity_log.sql` | `activity_log` audit trail |
+| `08` | `08_automation.sql` | `automation_rules` JSONB event rules |
+| `09` | `09_notifications.sql` | `notifications` inbox |
+| `10` | `10_integrations.sql` | `webhooks` & outbound event delivery |
+
+### 1.2 Core Business Triggers & Logic
+
+1. **Auto-Generated Issue Keys (`generate_issue_key`)**:
+   * Auto-increments project sequence number and formats human-readable keys (e.g. `ENG-1`, `CUS1-102`).
+2. **Strict Issue Hierarchy Validation (`validate_issue_hierarchy`)**:
+   * Uses `hierarchy_level`: `0` (Subtask), `1` (Task, Story, Bug), `2` (Epic).
+   * Enforces rule: `child_level < parent_level` (Subtasks cannot have children; Tasks cannot nest under Tasks).
+3. **Full-Text Search Vector Sync (`sync_issue_search_vector`)**:
+   * Automatically computes weighted `tsvector` (`summary`: Weight A, `description`: Weight B) with GIN and Trigram indexes.
 
 ---
 
@@ -61,9 +90,10 @@ apps/api/src/
 │
 ├── modules/
 │   ├── core/                    # Projects, issues, sprints, comments, decisions
+│   │   ├── tickets.sql          # Co-located domain SQL contract
 │   │   ├── core.types.ts        # DTOs & typed Fastify route generics
 │   │   ├── core.schema.ts       # Fastify JSON validation schemas
-│   │   ├── core.repository.ts   # Isolated data access (mockDb / Postgres)
+│   │   ├── core.repository.ts   # Isolated data access (Postgres / @flowline/db)
 │   │   ├── core.events.ts       # Event publishing helpers & payload types
 │   │   ├── core.service.ts      # Pure business rules (Zero Fastify imports)
 │   │   ├── core.controller.ts   # Typed Fastify HTTP handler
@@ -71,6 +101,7 @@ apps/api/src/
 │   │   └── index.ts
 │   │
 │   ├── auth/                    # Users, tenancy context, companies
+│   │   ├── auth.sql
 │   │   ├── auth.types.ts
 │   │   ├── auth.schema.ts
 │   │   ├── auth.repository.ts
@@ -80,6 +111,7 @@ apps/api/src/
 │   │   └── index.ts
 │   │
 │   ├── automation/              # Sandboxed rule evaluation, event listeners, idempotency
+│   │   ├── automation.sql
 │   │   ├── automation.types.ts
 │   │   ├── automation.schema.ts
 │   │   ├── automation.state.ts  # Encapsulated AutomationRuleStore & Idempotency cache
@@ -91,6 +123,7 @@ apps/api/src/
 │   │   └── index.ts
 │   │
 │   ├── realtime/                # In-process events, SSE streams, ephemeral presence
+│   │   ├── notifications.sql
 │   │   ├── realtime.types.ts
 │   │   ├── realtime.schema.ts
 │   │   ├── realtime.presence.state.ts # Encapsulated PresenceStore class
@@ -121,6 +154,7 @@ apps/api/src/
 │   │   └── index.ts
 │   │
 │   ├── integrations/            # Inbound webhooks, Supabase storage URLs
+│   │   ├── webhooks.sql
 │   │   ├── integrations.types.ts
 │   │   ├── integrations.schema.ts
 │   │   ├── integrations.storage.ts # Storage signed URL generator
@@ -149,7 +183,7 @@ apps/api/src/
 | `routes.ts` | Register route, bind schema, bind controller handler | Any logic, any DB call, any `as any` |
 | `controller.ts` | Read typed `request.params/query/body`, call service, set HTTP status/response shape | Business logic, direct DB access, event publishing |
 | `service.ts` | Business rules, orchestration, calls repository + event-bus, throws domain errors | Import anything from `fastify`, touch `request`/`reply` |
-| `repository.ts` | DB/mockDb queries only, returns domain types | Business logic, HTTP validation, event publishing |
+| `repository.ts` | DB (`@flowline/db`) queries only, returns domain types | Business logic, HTTP validation, event publishing |
 | `events.ts` | Define event payload shapes, subscribe handlers that call into `service.ts` | Route/HTTP concerns |
 | `state.ts` | Encapsulate in-memory state, TTL evictions, idempotency caches | Route/HTTP concerns |
 
@@ -175,7 +209,8 @@ flowchart TD
     EventBus -->|Async Event Dispatch| Auto
     EventBus -->|Async Event Dispatch| Analytics
 
-    API -->|RLS + JSONB| DB[(Supabase Postgres 16)]
+    API -->|withTenantContext / Pool| DBPackage["@flowline/db"]
+    DBPackage -->|RLS + JSONB| DB[(Supabase Postgres 16)]
     API -->|Sliding Window| Cache[(Upstash Redis Free Tier)]
     API -->|Async Jobs| Queue[(In-Process Queue / QStash)]
     API -->|Signed URLs| Storage[(Supabase Storage)]
@@ -183,51 +218,7 @@ flowchart TD
 
 ---
 
-## 3. Key Domain Capabilities
-
-### 3.1 Module Boundaries (Seam Enforcement)
-* No code outside a module imports its internal database models directly.
-* Cross-module interactions occur strictly through exported module interfaces (`index.ts`) or asynchronous domain events.
-
-### 3.2 Auth & In-Memory Verification
-* Validate JWTs in-process (signature + expiry) with zero database round-trips for basic request authentication.
-* Cache tenant permissions with short TTL in memory / Upstash Redis free tier.
-
-### 3.3 Search — Postgres-Native (tsvector & pg_trgm)
-* High-performance full-text search with `tsvector` + GIN index, and `pg_trgm` for fuzzy and partial matching.
-* Abstracted behind the `search` module interface so swapping to Elasticsearch in v2 requires zero calling-code rewrites.
-
-### 3.4 Realtime & Ephemeral Presence
-* In-process EventBus subscriptions piped to SSE streams (`/api/realtime`).
-* Ephemeral collaboration state (`PresenceStore`: cursor positions, presence heartbeats) is kept strictly in-memory or Redis, never persisted to PostgreSQL.
-
-### 3.5 Automation — Event-Driven & Sandboxed
-* Subscribes to in-process domain events.
-* Sandboxed, timeout-bounded rule execution (`evaluateRuleSafely`, no `eval`) and idempotency tracking (`AutomationRuleStore`) to prevent duplicate actions on retry.
-
-### 3.6 AI Features — Asynchronous & Budget-Aware
-* Issue summarization and subtask generation dispatched via async background jobs (`/api/ai/summarize`).
-* Tenant context isolated per prompt with token usage tracking.
-
-### 3.7 Analytics — Pre-Aggregated Rollups
-* Reports and Weather Map summaries are pre-aggregated (representing PostgreSQL materialized views) rather than computed dynamically on client requests.
-
-### 3.8 Observability & Centralized Structured Logging (Pino + Axiom)
-* **Pino Multi-Stream Pipeline:** `apps/api/src/shared/logger.ts` configures a high-performance, non-blocking multi-stream architecture:
-  * **Local Development:** Human-readable colorized output via `pino-pretty`.
-  * **Production Console:** Raw NDJSON output piped to `process.stdout` for container log collectors.
-  * **Remote Cloud Ingestion (Axiom Free Tier):** A resilient, debounced batch stream (200ms buffer window) shipping logs directly to Axiom's Ingestion API (`https://api.axiom.co/v1/datasets/{dataset}/ingest`).
-* **Multi-Tenant Context & Trace Propagation:**
-  * Incoming HTTP requests automatically receive a unique `traceId` (extracted from `x-request-id` or generated via UUIDv4).
-  * Fastify's `tenancy.plugin.ts` decorates `request.log` with `{ traceId, tenantId, companyId, userId, role }` so every log line is fully queryable across tenant boundaries.
-  * Domain services, background queues, and EventBus subscribers utilize `createChildLogger(moduleName)` to maintain contextual diagnostic trails without passing HTTP request objects into business logic.
-* **PII & Secret Redaction:**
-  * Built-in Pino redaction filters out sensitive fields (`req.headers.authorization`, `x-company-id`, `x-tenant-id`, `password`, `token`, `secret`, `apiKey`), masking them as `[REDACTED]` prior to serialization.
-* **Fail-Safe Ingestion:** Network failures or API token misconfigurations in the remote Axiom stream are caught asynchronously, ensuring logging never crashes the backend service or degrades API response times.
-
----
-
-## 4. Suggested 100% Free-Tier Stack ($0/Month)
+## 3. Suggested 100% Free-Tier Stack ($0/Month)
 
 | Component | Free Provider | Free Tier Allowance | Purpose |
 |---|---|---|---|
@@ -241,7 +232,7 @@ flowchart TD
 
 ---
 
-## 5. Migration Readiness Checklist
+## 4. Migration Readiness Checklist
 
 Verify these 5 criteria before extracting any module into a standalone v2 microservice:
 
