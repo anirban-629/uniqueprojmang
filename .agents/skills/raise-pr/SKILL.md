@@ -11,11 +11,12 @@ Use this skill when asked to *"raise a PR"*, *"create a pull request"*, *"open a
 
 ---
 
-## 🎯 Scope & Rules
+## Scope & Rules
 
 1. **Target Base Branch:** Always target **`master`** as the base branch.
 2. **Interactive Approval:** Always present the generated PR title, body, and test strategy to the user for confirmation before raising the PR.
-3. **High-Quality PR Standards:** Every PR must include:
+3. **No Emojis:** Do not include emojis in generated PR titles or descriptions. Use clean, professional rich-text Markdown formatting.
+4. **High-Quality PR Standards:** Every PR must include:
    - Clear context & problem statement.
    - Grouped bullet points of changes by workspace package/app.
    - Concrete test strategy (automated test results + manual testing steps).
@@ -23,7 +24,7 @@ Use this skill when asked to *"raise a PR"*, *"create a pull request"*, *"open a
 
 ---
 
-## 📋 Step-by-Step Procedure
+## Step-by-Step Procedure
 
 ### Step 1: Pre-Flight Branch & Diff Inspection
 1. Check the current branch:
@@ -45,17 +46,17 @@ Use this skill when asked to *"raise a PR"*, *"create a pull request"*, *"open a
 
 ### Step 2: Formulate PR Title & Body
 
-Draft the PR content using the standardized template:
+Draft the PR content using the standardized template (strictly without emojis):
 
 #### 1. Title Format
 `[TYPE](scope): Clear and concise title of the PR`
 
 #### 2. Body Template
 ```markdown
-## 📌 Summary & Context
+## Summary & Context
 <!-- Provide a 2-4 sentence overview of what this PR accomplishes and why it is needed. -->
 
-## 🚀 Key Changes
+## Key Changes
 <!-- Group changes by application, package, or domain -->
 ### `apps/web` (or other app)
 - Change item 1
@@ -67,7 +68,7 @@ Draft the PR content using the standardized template:
 ### Documentation & Config
 - Change item 1
 
-## 🧪 Test Strategy & Verification
+## Test Strategy & Verification
 ### Automated Tests & Checks
 - [x] `npm run check-types` passed (0 errors across monorepo)
 - [x] Husky pre-commit and commit-msg hooks validated
@@ -79,7 +80,7 @@ Draft the PR content using the standardized template:
    - Navigate to `http://localhost:3000/...`
    - Verify specific UI/API behavior.
 
-## 📋 Review Checklist
+## Review Checklist
 - [x] Follows monorepo code conventions and Husky commit guidelines
 - [x] Architectural documentation / ADR updated (if applicable)
 - [x] No breaking API changes without backward compatibility
@@ -97,13 +98,8 @@ Draft the PR content using the standardized template:
 ---
 
 ### Step 4: Execute PR Creation
-1. Attempt to create the PR via GitHub CLI:
+1. Create the PR via GitHub CLI:
    ```bash
    gh pr create --base master --head <current-branch> --title "<title>" --body "<body_content>"
    ```
-2. If `gh` is unavailable or not authenticated in the terminal:
-   - Provide the direct GitHub PR URL:
-     ```text
-     https://github.com/<owner>/<repo>/compare/master...<current-branch>?expand=1
-     ```
-   - Output the formatted Markdown so the user can easily paste it into GitHub if needed.
+2. Return the resulting GitHub Pull Request URL directly in the chat.

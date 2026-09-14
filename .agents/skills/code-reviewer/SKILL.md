@@ -11,7 +11,7 @@ Perform a thorough, actionable, and multi-dimensional code review on local chang
 
 ---
 
-## 🎯 Trigger Conditions
+## Trigger Conditions
 Activate this skill when:
 - The user requests: *"review my changes"*, *"review this code"*, *"review diff"*, *"audit these files"*.
 - The user specifies a PR: *"review PR #<number>"*, *"review PR <URL>"*.
@@ -19,7 +19,7 @@ Activate this skill when:
 
 ---
 
-## 🔍 Review Workflow
+## Review Workflow
 
 ### 1. Detect Review Target
 - **Pull Request (PR # / URL):**
@@ -53,14 +53,14 @@ Evaluate the diff across the following 6 core pillars:
 
 ---
 
-## 📋 Feedback Structure
+## Feedback Structure
 
 Always format the final review output following this exact structure:
 
 ### 1. Summary
 *1–3 concise sentences summarizing what the diff accomplishes and the overall quality of the changes.*
 
-### 2. 🚨 Critical Issues (Must Fix)
+### 2. Critical Issues (Must Fix)
 *Blockers that cause bugs, security risks, memory leaks, or data corruption.*
 - **File & Location:** `[file_path:line]`
 - **Problem:** Clear explanation of the bug or risk.
@@ -68,19 +68,19 @@ Always format the final review output following this exact structure:
 
 *(If none, state "None detected.")*
 
-### 3. ⚠️ Improvements (Should Fix)
+### 3. Improvements (Should Fix)
 *Refactoring opportunities, edge case resilience, performance optimizations, or architectural alignment.*
 - **File & Location:** `[file_path:line]`
 - **Description & Recommendation:** Why and how to improve.
 
 *(If none, state "None detected.")*
 
-### 4. 💡 Nitpicks (Optional / Style)
+### 4. Nitpicks (Optional / Style)
 *Minor formatting, naming suggestions, or comment clarity.*
 
 *(If none, state "None detected.")*
 
-### 5. 🏁 Final Verdict
+### 5. Final Verdict
 Select one:
 - **`APPROVE`** — Code is production-ready.
 - **`APPROVE WITH CHANGES`** — Non-critical improvements recommended before merge.

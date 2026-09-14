@@ -11,23 +11,23 @@ This skill guides the agent through an **interactive, human-in-the-loop Git work
 
 ---
 
-## 🔒 Mandatory Human-in-the-Loop Rules
+## Mandatory Human-in-the-Loop Rules
 
 You must **NEVER** run branch creation, commits, or pushes autonomously in the background. You **MUST** stop and ask the user for confirmation at each of the 3 checkpoints:
 
-1. 🛑 **Checkpoint 1 — Branch Creation Permission:**
+1. **Checkpoint 1 — Branch Creation Permission:**
    - Propose a semantic branch name based on the changes.
    - **Ask the user for permission** to create/checkout the branch with that specific name before running `git checkout -b <branch>`.
-2. 🛑 **Checkpoint 2 — Commit Message & Staging Permission:**
+2. **Checkpoint 2 — Commit Message & Staging Permission:**
    - Present the staged files and the formatted Husky commit message (`[TYPE](scope): description`).
    - **Ask the user for confirmation** before running `git commit`.
-3. 🛑 **Checkpoint 3 — Publish / Push Permission:**
+3. **Checkpoint 3 — Publish / Push Permission:**
    - Inform the user that the branch is ready to be published to GitHub.
    - **Ask the user for permission** before running `git push -u origin <branch>`.
 
 ---
 
-## 📋 Step-by-Step Execution Protocol
+## Step-by-Step Execution Protocol
 
 ### Step 1: Analyze Changes & State
 1. Run `git status` and `git diff --stat` to understand all modified and untracked files.

@@ -15,7 +15,7 @@ pattern="^\[($allowed_types)\](\([a-zA-Z0-9_-]+\))?: .+"
 
 if ! echo "$commit_msg" | grep -qE "$pattern"; then
   echo ""
-  echo "❌ FAILED: Invalid commit message format!"
+  echo "FAILED: Invalid commit message format!"
   echo "--------------------------------------------------"
   echo "Expected: [TYPE](scope): <message>  or  [TYPE]: <message>"
   echo ""
