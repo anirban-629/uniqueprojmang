@@ -1,5 +1,8 @@
 import EventEmitter from 'events';
 import { DomainEvent } from '@flowline/types';
+import { createChildLogger } from './logger.js';
+
+const logger = createChildLogger('event-bus');
 
 export class InProcessEventBus {
   private emitter: EventEmitter;
@@ -18,6 +21,7 @@ export class InProcessEventBus {
   }
 
   public publish<T = Record<string, unknown>>(event: DomainEvent<T>): void {
+    logger.debug({ eventName: event.eventName, eventId: event.eventId, tenantId: event.tenantId }, 'Publishing domain event');
     setImmediate(() => {
       this.emitter.emit(event.eventName, event);
       this.emitter.emit('*', event);
@@ -32,7 +36,7 @@ export class InProcessEventBus {
       try {
         await handler(event);
       } catch (err) {
-        console.error(`[EventBus] Error handling event "${eventName}":`, err);
+        logger.error({ err, eventName, eventId: event.eventId }, `Error handling event "${eventName}"`);
       }
     });
   }

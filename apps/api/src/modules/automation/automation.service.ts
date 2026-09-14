@@ -1,8 +1,11 @@
 import { AutomationRule } from '@flowline/types';
 import { NotFoundError } from '../../shared/errors/index.js';
+import { createChildLogger } from '../../shared/logger.js';
 import { automationRuleStore, AutomationRuleStore } from './automation.state.js';
 import { evaluateRuleSafely } from './automation.evaluator.js';
 import { CreateOrTriggerAutomationRuleDto, TriggerRuleResult } from './automation.types.js';
+
+const logger = createChildLogger('automation');
 
 export class AutomationService {
   constructor(private readonly store: AutomationRuleStore = automationRuleStore) {}
@@ -17,6 +20,7 @@ export class AutomationService {
       throw new NotFoundError(`Automation rule '${ruleId}' not found`);
     }
     this.store.recordExecution(ruleId);
+    logger.info({ ruleId: rule.id, ruleName: rule.name }, `Triggered rule "${rule.name}" manually`);
     return {
       success: true,
       message: `Rule '${rule.name}' triggered`,
@@ -38,6 +42,7 @@ export class AutomationService {
     };
 
     this.store.addRule(newRule);
+    logger.info({ ruleId: newRule.id, ruleName: newRule.name }, `Created new automation rule "${newRule.name}"`);
     return newRule;
   }
 
@@ -51,7 +56,7 @@ export class AutomationService {
     for (const rule of rules) {
       if (evaluateRuleSafely(rule, payload)) {
         this.store.recordExecution(rule.id);
-        console.log(`[Automation] Triggered rule "${rule.name}" for event ${eventId}`);
+        logger.info({ ruleId: rule.id, ruleName: rule.name, eventId }, `Triggered automation rule "${rule.name}" for event ${eventId}`);
       }
     }
   }

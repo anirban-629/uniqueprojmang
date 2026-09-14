@@ -44,7 +44,8 @@ apps/api/src/
 ├── shared/
 │   ├── errors/                  # AppError, NotFoundError, ValidationError, ForbiddenError, UnauthorizedError, ConflictError
 │   ├── types/                   # TenantContext, PaginationQuery, ApiResponseMeta
-│   └── event-bus.ts             # In-process Domain Event Bus
+│   ├── event-bus.ts             # In-process Domain Event Bus
+│   └── logger.ts                # Centralized Pino + Axiom multi-stream structured logger
 │
 ├── plugins/
 │   ├── tenancy.plugin.ts        # Tenant extraction & Fastify request decoration
@@ -211,6 +212,19 @@ flowchart TD
 ### 3.7 Analytics — Pre-Aggregated Rollups
 * Reports and Weather Map summaries are pre-aggregated (representing PostgreSQL materialized views) rather than computed dynamically on client requests.
 
+### 3.8 Observability & Centralized Structured Logging (Pino + Axiom)
+* **Pino Multi-Stream Pipeline:** `apps/api/src/shared/logger.ts` configures a high-performance, non-blocking multi-stream architecture:
+  * **Local Development:** Human-readable colorized output via `pino-pretty`.
+  * **Production Console:** Raw NDJSON output piped to `process.stdout` for container log collectors.
+  * **Remote Cloud Ingestion (Axiom Free Tier):** A resilient, debounced batch stream (200ms buffer window) shipping logs directly to Axiom's Ingestion API (`https://api.axiom.co/v1/datasets/{dataset}/ingest`).
+* **Multi-Tenant Context & Trace Propagation:**
+  * Incoming HTTP requests automatically receive a unique `traceId` (extracted from `x-request-id` or generated via UUIDv4).
+  * Fastify's `tenancy.plugin.ts` decorates `request.log` with `{ traceId, tenantId, companyId, userId, role }` so every log line is fully queryable across tenant boundaries.
+  * Domain services, background queues, and EventBus subscribers utilize `createChildLogger(moduleName)` to maintain contextual diagnostic trails without passing HTTP request objects into business logic.
+* **PII & Secret Redaction:**
+  * Built-in Pino redaction filters out sensitive fields (`req.headers.authorization`, `x-company-id`, `x-tenant-id`, `password`, `token`, `secret`, `apiKey`), masking them as `[REDACTED]` prior to serialization.
+* **Fail-Safe Ingestion:** Network failures or API token misconfigurations in the remote Axiom stream are caught asynchronously, ensuring logging never crashes the backend service or degrades API response times.
+
 ---
 
 ## 4. Suggested 100% Free-Tier Stack ($0/Month)
@@ -222,6 +236,7 @@ flowchart TD
 | **API Documentation** | **Swagger UI / OpenAPI 3.0** | Built-in via `@fastify/swagger` | Hosted at `/docs` with interactive JWT testing |
 | **Cache & Rate Limit** | **Upstash Redis** | 10,000 commands/day via REST | Multi-tenant sliding window rate limiter |
 | **Storage** | **Supabase Storage** | 1 GB storage + RLS access control | Attachment uploads via signed URLs |
+| **Observability & Logs** | **Axiom Free Tier** | 0.5 GB/day ingest + 30-day retention | Centralized JSON log query engine, audit trails, and live telemetry |
 | **Async Jobs** | **In-Process Queue / Upstash QStash** | Free tier | Asynchronous AI jobs and automation execution |
 
 ---
