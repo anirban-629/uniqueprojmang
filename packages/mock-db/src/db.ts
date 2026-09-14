@@ -412,6 +412,20 @@ class MockDatabase {
     return this.decisions.get(projectId) || [];
   }
 
+  public getIssues(projectId?: string): Issue[] {
+    if (projectId) {
+      return this.issuesByProject.get(projectId) || [];
+    }
+    return Array.from(this.issuesById.values());
+  }
+
+  public getIssueByIdOrKey(idOrKey: string): Issue | undefined {
+    if (this.issuesById.has(idOrKey)) {
+      return this.issuesById.get(idOrKey);
+    }
+    return Array.from(this.issuesById.values()).find(i => i.key.toLowerCase() === idOrKey.toLowerCase());
+  }
+
   public getAutomations(projectId: string): AutomationRule[] {
     return this.automations.get(projectId) || [];
   }

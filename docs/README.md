@@ -8,15 +8,15 @@ Welcome to the **Flowline** architecture and development documentation. Flowline
 
 ### System Architecture
 * [**System Architecture Overview**](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/architecture/system-overview.md) — Unified end-to-end architecture diagram, data flow, and package structure.
+* [**Backend Architecture (Free-Tier Modular Monolith)**](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/architecture/backend-architecture.md) — Migration-ready modular monolith with 8 domain-owned modules, in-process EventBus, and migration checklist.
 * [**Frontend Architecture (1M+ Users Scale)**](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/architecture/frontend-architecture.md) — Next.js 15 App Router, Server Components by default, virtualization, TanStack Query caching, and real-time SSE.
-* [**Backend Architecture ($0 Free Tier Blueprint)**](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/architecture/backend-architecture.md) — Zero-cost production infrastructure blueprint using Supabase, Upstash Redis, Inngest serverless jobs, and Cloudflare R2.
 
 ---
 
 ### Architecture Decision Records (ADRs)
 * [**ADR Template**](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/adr/template.md) — Template for proposing and recording architectural decisions.
-* [**ADR 0001: Serverless vs. Cloud Docker**](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/adr/0001-serverless-vs-docker.md) — Rationale for choosing serverless free tiers over expensive multi-container cloud Docker hosting.
-* [**ADR 0002: Next.js App Router & Scaling**](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/adr/0002-nextjs-app-router-scale.md) — Decision to use Next.js 15 Server Components, virtualization, and cursor pagination.
+* [**ADR 0001: Tenancy Model (Pooled RLS)**](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/adr/0001-tenancy-model.md) — Rationale for pooled multi-tenancy with PostgreSQL Row-Level Security.
+* [**ADR 0002: Modular Monolith Boundaries**](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/adr/0002-modular-monolith-boundary.md) — Decision to structure the backend as a modular monolith with domain seams and an in-process EventBus.
 
 ---
 

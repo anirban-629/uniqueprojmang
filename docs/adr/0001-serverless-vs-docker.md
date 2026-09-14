@@ -19,7 +19,7 @@ We needed an architecture capable of running multi-tenant workloads for ~100 com
 
 ## Considered Options
 1. **Cloud Multi-Container Docker (Render/Railway/AWS ECS):** Requires paid plans ($20–$50/mo minimum) for persistent BullMQ workers and Redis.
-2. **100% Serverless Managed Free Tiers:** Next.js Route Handlers on Vercel + Supabase (Postgres with RLS) + Upstash (Redis over HTTP) + Inngest (Serverless event jobs via webhooks) + Cloudflare R2.
+2. **100% Serverless Managed Free Tiers:** Next.js Route Handlers on Vercel + Supabase (Postgres with RLS & Storage) + Upstash (Redis over HTTP) + Inngest (Serverless event jobs via webhooks).
 
 ## Decision Outcome
 Chosen option: **Option 2 (Serverless Managed Free Tiers)**.
