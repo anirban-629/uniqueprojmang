@@ -199,3 +199,76 @@ export interface IssueUpdatedEventPayload {
     sprintId?: { from?: string; to?: string };
   };
 }
+
+export type TenantRole = 'owner' | 'admin' | 'member' | 'viewer';
+export type MemberStatus = 'active' | 'invited' | 'suspended';
+
+export interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  plan: 'free' | 'pro' | 'enterprise';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TenantMember {
+  id: string;
+  tenantId: string;
+  userId: string;
+  role: TenantRole;
+  status: MemberStatus;
+  invitedAt?: string;
+  joinedAt: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  fullName?: string;
+  avatarUrl?: string;
+  status: 'active' | 'suspended' | 'pending_verification';
+  emailVerifiedAt?: string;
+  createdAt: string;
+}
+
+export type AuthAuditAction = 
+  | 'login' 
+  | 'failed_login' 
+  | 'logout' 
+  | 'logout_all' 
+  | 'register' 
+  | 'switch_tenant' 
+  | 'invite_sent' 
+  | 'invite_accepted' 
+  | 'password_changed';
+
+export interface UserRegisteredEventPayload {
+  userId: string;
+  email: string;
+  tenantId: string;
+  tenantName: string;
+  role: TenantRole;
+}
+
+export interface UserLoggedInEventPayload {
+  userId: string;
+  email: string;
+  tenantId: string;
+  ip?: string;
+}
+
+export interface TenantCreatedEventPayload {
+  tenantId: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+}
+
+export interface MemberInvitedEventPayload {
+  tenantId: string;
+  email: string;
+  role: TenantRole;
+  invitedBy: string;
+}
+

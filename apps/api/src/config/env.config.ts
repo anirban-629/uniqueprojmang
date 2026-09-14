@@ -15,6 +15,10 @@ export interface EnvConfig {
   AXIOM_DATASET: string;
   AXIOM_OTLP_ENDPOINT: string;
   LOG_LEVEL: string;
+  JWT_SECRET: string;
+  JWT_ACCESS_EXPIRES_IN: string;
+  JWT_REFRESH_EXPIRES_IN: string;
+  PASSWORD_PEPPER: string;
 }
 
 export function loadEnvConfig(): EnvConfig {
@@ -32,8 +36,13 @@ export function loadEnvConfig(): EnvConfig {
     AXIOM_API_TOKEN: process.env.AXIOM_API_TOKEN,
     AXIOM_DATASET: process.env.AXIOM_DATASET || 'flowline-dev',
     AXIOM_OTLP_ENDPOINT: process.env.AXIOM_OTLP_ENDPOINT || 'https://api.axiom.co/v1/logs',
-    LOG_LEVEL: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug')
+    LOG_LEVEL: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+    JWT_SECRET: process.env.JWT_SECRET || 'flowline-super-secret-jwt-key-change-in-production-2026',
+    JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
+    JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
+    PASSWORD_PEPPER: process.env.PASSWORD_PEPPER || 'flowline-secret-pepper-2026'
   };
 }
 
 export const env = loadEnvConfig();
+
