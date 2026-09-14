@@ -2,89 +2,86 @@
 name: git-branch-and-push
 description: >-
   Interactive Git workflow for creating meaningful branches, authoring Husky/Bracket-format
-  commit messages ([TYPE](scope): message), and pushing code to GitHub with mandatory user confirmation at every critical step.
+  commit messages ([TYPE](scope): message), and publishing/pushing code to GitHub with mandatory user confirmation at every critical step.
 ---
 
 # Git Branch and Push Workflow
 
-Use this skill when preparing to create a new Git branch, stage changes, commit with Husky-compliant `[TYPE](scope): message` format, and push changes to GitHub.
+This skill guides the agent through an **interactive, human-in-the-loop Git workflow**. It ensures branch names are meaningful, commit messages strictly adhere to the project's Husky `commit-msg` hook format (`[TYPE](scope): description`), and **no destructive or remote Git actions occur without explicit user permission**.
 
 ---
 
 ## 🔒 Mandatory Human-in-the-Loop Rules
 
-You must **NEVER** run branch creation, commits, or pushes silently. You must ask the user for confirmation and feedback before taking any major Git action:
+You must **NEVER** run branch creation, commits, or pushes autonomously in the background. You **MUST** stop and ask the user for confirmation at each of the 3 checkpoints:
 
-1. **Ask before creating/switching branches:** Propose the branch name and get explicit user approval before executing `git checkout -b <branch>`.
-2. **Ask before committing:** Present the formatted Husky-compliant commit message `[TYPE](scope): description`, list of staged files, and ask for confirmation.
-3. **Ask before pushing to remote:** Confirm the target remote and branch name before executing `git push`.
+1. 🛑 **Checkpoint 1 — Branch Creation Permission:**
+   - Propose a semantic branch name based on the changes.
+   - **Ask the user for permission** to create/checkout the branch with that specific name before running `git checkout -b <branch>`.
+2. 🛑 **Checkpoint 2 — Commit Message & Staging Permission:**
+   - Present the staged files and the formatted Husky commit message (`[TYPE](scope): description`).
+   - **Ask the user for confirmation** before running `git commit`.
+3. 🛑 **Checkpoint 3 — Publish / Push Permission:**
+   - Inform the user that the branch is ready to be published to GitHub.
+   - **Ask the user for permission** before running `git push -u origin <branch>`.
 
 ---
 
-## 📋 Step-by-Step Procedure
+## 📋 Step-by-Step Execution Protocol
 
-### Step 1: Inspect Repository State
-1. Run `git status` and `git diff --stat` to review changed and untracked files.
-2. Analyze the nature of the changes (feature, bugfix, documentation, refactor, chore, etc.).
+### Step 1: Analyze Changes & State
+1. Run `git status` and `git diff --stat` to understand all modified and untracked files.
+2. Determine:
+   - Primary **Type**: `FEAT`, `FIX`, `DOCS`, `STYLE`, `REFACTOR`, `PERF`, `TEST`, `BUILD`, `CI`, `CHORE`, `REVERT`, `DEPS`.
+   - Primary **Scope**: `web`, `api`, `auth-svc`, `worker-svc`, `ui`, `types`, `hooks`, `mock-db`, `db`, `config`, `root`, `docs`, etc.
+   - Concise **Summary**: What was actually accomplished.
 
-### Step 2: Propose Branch Name & Ask for Confirmation
-1. Generate a meaningful branch name following the naming pattern:
-   - `feat/<short-description>`: For new features
-   - `fix/<short-description>`: For bug fixes
-   - `docs/<short-description>`: For documentation updates
-   - `refactor/<short-description>`: For code restructuring
-   - `chore/<short-description>`: For build, dependencies, or configuration changes
-   - `perf/<short-description>`: For performance improvements
-2. **Do NOT run git checkout yet.** Present the proposed branch name to the user and request confirmation or an alternate name.
-3. Once approved by the user, run `git checkout -b <approved-branch-name>`.
+---
 
-### Step 3: Stage Changes
-1. Stage the relevant files: `git add <files>` (or `git add -A` if all changes are intended).
-2. Verify staged items with `git status`.
+### Step 2: Propose Branch Name & Request Permission (Checkpoint 1)
+1. Formulate a semantic branch name using the standard prefix:
+   - `feat/<short-name>`: New feature or capability
+   - `fix/<short-name>`: Bug fix
+   - `docs/<short-name>`: Documentation additions/updates
+   - `refactor/<short-name>`: Code refactoring
+   - `chore/<short-name>`: Dependencies, configs, maintenance
+   - `perf/<short-name>`: Performance enhancements
+2. **STOP AND ASK THE USER:**
+   - Present the proposed branch name (e.g. `feat/board-virtualization` or `docs/architecture-hub`).
+   - Ask: *"Would you like me to create and switch to branch `<branch-name>`, or would you prefer a different name?"*
+   - **Wait for user confirmation** before executing `git checkout -b <approved-branch-name>`.
 
-### Step 4: Author Husky-Compliant Commit Message
-Commit messages **MUST** satisfy the project's Husky `commit-msg` hook format:
+---
+
+### Step 3: Stage Files & Format Commit Message (Checkpoint 2)
+1. Run `git add <files>` (or `git add -A`).
+2. Compose the commit message strictly according to the Husky hook format:
 
 ```text
-[TYPE](scope): <short summary in imperative mood>
+[TYPE](scope): <imperative mood summary>
 
-[optional body explaining context, changes, and rationale]
-
-[optional footer(s) / issue references]
+[optional body with details]
 ```
 
-#### Allowed Types (Must be UPPERCASE):
-* `FEAT`: A new feature
-* `FIX`: A bug fix
-* `DOCS`: Documentation only changes
-* `STYLE`: Formatting, white-space, CSS polish
-* `REFACTOR`: Code restructuring without behavioral change
-* `PERF`: Performance optimizations
-* `TEST`: Adding or correcting tests
-* `BUILD`: Build system, bundlers, or toolchains
-* `CI`: CI/CD pipelines and workflows
-* `CHORE`: Routine tasks, configs, maintenance
-* `REVERT`: Reverting a previous commit
-* `DEPS`: Dependency upgrades or package changes
+#### Valid Types (Must be UPPERCASE):
+`FEAT`, `FIX`, `DOCS`, `STYLE`, `REFACTOR`, `PERF`, `TEST`, `BUILD`, `CI`, `CHORE`, `REVERT`, `DEPS`
 
-#### Standardized Monorepo Scopes:
-* **Apps:** `(web)`, `(api)`, `(admin)`, `(service-desk)`
-* **Microservices:** `(auth-svc)`, `(notify-svc)`, `(worker-svc)`, `(realtime-svc)`
-* **Shared Packages:** `(ui)`, `(types)`, `(hooks)`, `(mock-db)`, `(db)`, `(config)`
-* **Global / Infra:** `(root)`, `(docs)`, `(ci)`, `(deps)`, `(infra)`, `(security)`
+#### Valid Scopes:
+* Apps: `(web)`, `(api)`, `(admin)`, `(service-desk)`
+* Microservices: `(auth-svc)`, `(notify-svc)`, `(worker-svc)`, `(realtime-svc)`
+* Packages: `(ui)`, `(types)`, `(hooks)`, `(mock-db)`, `(db)`, `(config)`
+* Monorepo Global: `(root)`, `(docs)`, `(ci)`, `(deps)`, `(infra)`, `(security)`
 
-#### Examples:
-* `[FEAT](web): add board virtualization for 50k+ issues`
-* `[FIX](api): handle nullable companyId in issue route handler`
-* `[FEAT](auth-svc): implement JWT token rotation with Upstash Redis`
-* `[CHORE](types): sync OpenAPI DTO definitions`
-* `[DOCS](architecture): add system overview diagram and ADR-0001`
-* `[CHORE](root): bump turbo version`
+3. **STOP AND ASK THE USER:**
+   - Display the exact list of staged files and the proposed commit message.
+   - Ask: *"Please confirm if you want to commit these changes with message: `[TYPE](scope): <summary>`"*
+   - **Wait for user confirmation** before executing `git commit -m "..."`.
 
-#### Present for Confirmation:
-Present the exact commit message to the user for confirmation before executing `git commit`.
+---
 
-### Step 5: Push to Remote with Confirmation
-1. Ask the user: *"Are you ready to push `<branch-name>` to `origin`?"*
-2. Upon approval, run `git push -u origin <branch-name>`.
-3. If remote authentication or permissions fail, provide clear diagnostic instructions (SSH vs PAT/HTTPS).
+### Step 4: Publish & Push to Remote (Checkpoint 3)
+1. **STOP AND ASK THE USER:**
+   - Inform the user that the local branch is committed and ready to be published to the remote repository.
+   - Ask: *"Are you ready for me to push and publish branch `<branch-name>` to `origin`?"*
+   - **Wait for user confirmation** before executing `git push -u origin <branch-name>`.
+2. If the push fails due to GitHub permissions or authentication (e.g. 403 Forbidden), provide clear instructions on switching accounts, SSH keys, or Personal Access Tokens (PAT).
