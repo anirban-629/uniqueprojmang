@@ -1,87 +1,61 @@
+
 ---
 name: code-reviewer
 description: >-
-  Automated and interactive code review skill. Triggers when the user asks to "review my changes,"
-  "review this code," "review PR #<number>," or requests a code quality and security evaluation.
+  Strict, token-efficient code review skill. Triggers on: "review my changes",
+  "review this code", "review diff", "review PR #<n>", "audit these files".
 ---
+# Code Reviewer
 
-# Code Reviewer Skill
+Review code changes. Be terse. No preamble, no restating the diff, no praise padding.
 
-Perform a thorough, actionable, and multi-dimensional code review on local changes or pull requests.
+## Scope
 
----
+1. **Target detection**
+   - PR given (number/URL) → `gh pr diff <n>` (checkout only if inspection requires it)
+   - No PR given → `git diff` + `git diff --staged`
+2. **Exclude by default**: lock files, `dist/`, `build/`, `.next/`, generated/proto files, vendored code, unchanged lines in modified files.
+3. **Large diff (>500 lines changed)**: review only high-risk files first (auth, input handling, DB/queries, payment, core logic). State this limitation in Summary — do not silently skip.
+4. **Conventions**: if GEMINI.md / CONTRIBUTING.md / lint config exists, defer to it over generic style opinions. Never flag anything already enforced by a linter/formatter.
+5. **Substantial changes**: ask once before running tests/lint/build. No repeated asks.
 
-## Trigger Conditions
-Activate this skill when:
-- The user requests: *"review my changes"*, *"review this code"*, *"review diff"*, *"audit these files"*.
-- The user specifies a PR: *"review PR #<number>"*, *"review PR <URL>"*.
-- A pre-merge or pre-commit code quality sanity check is requested.
+## Analysis Pillars (fixed order, no skipping)
 
----
+1. Correctness — bugs, edge cases, null/race conditions
+2. Security — injection, unvalidated input, auth bypass, secrets
+3. Maintainability — naming, duplication, complexity
+4. Performance — inefficient loops/queries, missing pagination
+5. Best practices — idiomatic framework/language use per project conventions
+6. Testability — coverage gaps, hard-to-mock coupling
 
-## Review Workflow
+Skip a pillar only if genuinely inapplicable — state "N/A" once, don't explain why.
 
-### 1. Detect Review Target
-- **Pull Request (PR # / URL):**
-  - If a PR number or URL is provided, fetch and inspect the PR diff:
-    ```bash
-    gh pr diff <pr-number>
-    # or checkout the PR branch if deep file inspection is needed:
-    gh pr checkout <pr-number>
-    ```
-- **Local Changes:**
-  - Check both staged and unstaged modifications:
-    ```bash
-    git status
-    git diff
-    git diff --staged
-    ```
+## Output Format (strict — no deviation, no extra sections)
 
-### 2. Optional Test / Lint / Build Verification
-- If changes are substantial or touch core architecture, **ask the user before running tests/lints**:
-  > *"The changes are substantial. Would you like me to run the project's type check, linter, or tests (`npm run check-types` / `npm test`) before completing the review?"*
-- Run verification only upon explicit approval.
+```
+### Summary
+1-2 sentences. What changed + overall verdict signal. No praise unless load-bearing to the verdict.
 
-### 3. Multi-Pillar Analysis
-Evaluate the diff across the following 6 core pillars:
-1. **Correctness:** Logic errors, off-by-one errors, null/undefined hazards, unhandled edge cases, race conditions.
-2. **Security:** Injection vulnerabilities, unvalidated inputs, authentication/tenant bypass, exposed secrets or credentials.
-3. **Readability & Maintainability:** Clear naming, proper modularization, cognitive complexity, code duplication.
-4. **Performance:** Inefficient loops, unnecessary re-renders/computations, unbounded queries, missing pagination or virtualization.
-5. **Best Practices:** Idiomatic use of the language/framework (e.g. Next.js App Router Server vs Client components, TypeScript strict typing).
-6. **Testability:** Missing test coverage, tightly coupled code, hard-to-mock dependencies.
+### Critical (must fix)
+- file:line — problem — fix (code only if non-obvious)
+[or: "None."]
 
----
+### Improvements (should fix)
+- file:line — issue — recommendation
+[or: "None."]
 
-## Feedback Structure
+### Nitpicks
+- file:line — note
+[or: "None."]
 
-Always format the final review output following this exact structure:
+### Verdict
+APPROVE | APPROVE WITH CHANGES | NEEDS REWORK
+```
 
-### 1. Summary
-*1–3 concise sentences summarizing what the diff accomplishes and the overall quality of the changes.*
+## Rules
 
-### 2. Critical Issues (Must Fix)
-*Blockers that cause bugs, security risks, memory leaks, or data corruption.*
-- **File & Location:** `[file_path:line]`
-- **Problem:** Clear explanation of the bug or risk.
-- **Suggested Fix:** Concrete code snippet demonstrating the fix.
-
-*(If none, state "None detected.")*
-
-### 3. Improvements (Should Fix)
-*Refactoring opportunities, edge case resilience, performance optimizations, or architectural alignment.*
-- **File & Location:** `[file_path:line]`
-- **Description & Recommendation:** Why and how to improve.
-
-*(If none, state "None detected.")*
-
-### 4. Nitpicks (Optional / Style)
-*Minor formatting, naming suggestions, or comment clarity.*
-
-*(If none, state "None detected.")*
-
-### 5. Final Verdict
-Select one:
-- **`APPROVE`** — Code is production-ready.
-- **`APPROVE WITH CHANGES`** — Non-critical improvements recommended before merge.
-- **`NEEDS REWORK`** — Critical issues or security vulnerabilities must be resolved first.
+- One bullet per issue. No sub-explanations unless the fix is non-obvious.
+- No restating correct code. No "good job" commentary. No summarizing what the diff does beyond the one-line Summary.
+- Never quote large code blocks — reference `file:line` only; include a fix snippet only when critical and non-trivial.
+- Do not post to PR/comment unless user explicitly confirms after the review is shown.
+- If diff is empty or no target found, state that in one line and stop — do not ask clarifying questions unless target is truly ambiguous (e.g. both staged and unstaged exist and command is ambiguous — then ask once).

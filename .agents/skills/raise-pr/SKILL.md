@@ -1,63 +1,96 @@
+
 ---
 name: raise-pr
 description: >-
-  Interactive skill dedicated to raising Pull Requests to master. Formulates professional PR titles,
-  detailed summaries, component change breakdowns, and comprehensive test strategies with mandatory user confirmation.
+  Interactive skill dedicated to raising Pull Requests. Detects the correct base branch,
+  formulates professional PR titles and summaries, verifies checklist claims before marking
+  them complete, and requires mandatory user confirmation before creating the PR.
 ---
+# Pull Request Creation Workflow
 
-# Pull Request Creation Workflow (Target: `master`)
-
-Use this skill when asked to *"raise a PR"*, *"create a pull request"*, *"open a PR to master"*, or *"submit these changes for review"*.
+Use this skill when asked to *"raise a PR"*, *"create a pull request"*, *"open a PR"*, or *"submit these changes for review"*.
 
 ---
 
 ## Scope & Rules
 
-1. **Target Base Branch:** Always target **`master`** as the base branch.
+1. **Base Branch Detection:** Never hardcode `master`. Detect the repo's actual default branch:
+   ```bash
+   gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
+   ```
+
+   Fall back to checking for `main` then `master` locally only if the above command fails (e.g., no `gh` auth).
 2. **Interactive Approval:** Always present the generated PR title, body, and test strategy to the user for confirmation before raising the PR.
-3. **No Emojis:** Do not include emojis in generated PR titles or descriptions. Use clean, professional rich-text Markdown formatting.
-4. **High-Quality PR Standards:** Every PR must include:
+3. **No Emojis:** Do not include emojis in generated PR titles or descriptions. Use clean, professional Markdown formatting.
+4. **No Fabricated Checkmarks:** Never mark a checklist item `[x]` unless the corresponding command was actually run in this session and passed. Unverified or skipped items must be shown as `[ ]` with a note (e.g., `(not run)`), never asserted as done.
+5. **Respect Existing Templates:** If `.github/PULL_REQUEST_TEMPLATE.md` (or `.gitlab/merge_request_templates/`) exists in the repo, use its structure instead of the default template below.
+6. **High-Quality PR Standards (default template only):** Every PR must include:
    - Clear context & problem statement.
    - Grouped bullet points of changes by workspace package/app.
-   - Concrete test strategy (automated test results + manual testing steps).
-   - Verification checklist.
+   - Concrete test strategy (actual automated results + manual testing steps).
+   - Verification checklist reflecting only what was actually checked.
 
 ---
 
 ## Step-by-Step Procedure
 
 ### Step 1: Pre-Flight Branch & Diff Inspection
-1. Check the current branch:
+
+1. Determine the base branch (see Rule 1 above).
+2. Check the current branch:
    ```bash
    git branch --show-current
    ```
-   *If on `master`, stop and notify the user that a PR cannot be created from `master` to `master`.*
-2. Ensure all local changes are committed and pushed to `origin`:
+
+   *If the current branch equals the base branch, stop and notify the user that a PR cannot be created from the base branch to itself.*
+3. Check for uncommitted changes:
    ```bash
    git status
-   git log master..HEAD --oneline
    ```
-3. Inspect the full diff between `master` and the current branch:
+
+   If there are uncommitted changes, ask the user whether to commit them before proceeding.
+4. Inspect commits and diff relative to the base branch:
    ```bash
-   git diff master..HEAD --stat
+   git log <base>..HEAD --oneline
+   git diff <base>..HEAD --stat
+   ```
+5. Check for an existing PR on this branch:
+   ```bash
+   gh pr list --head <current-branch> --json url,title,state
    ```
 
----
+   If one exists and is open, ask the user whether to update it instead of creating a new one. If they confirm, skip to Step 4 using `gh pr edit` instead of `gh pr create`.
 
-### Step 2: Formulate PR Title & Body
+### Step 2: Run Verification Checks (only with user confirmation)
 
-Draft the PR content using the standardized template (strictly without emojis):
+Ask once: *"Would you like me to run type-check/lint/tests/secret-scan before drafting the PR?"*
 
-#### 1. Title Format
+If confirmed, run whichever of these are configured in the repo, and record actual pass/fail:
+
+```bash
+npm run check-types   # or equivalent
+npm run lint
+npm test
+gitleaks detect --no-banner   # or equivalent secret scanner, if available
+```
+
+Only checks that were actually run and passed may later be marked `[x]` in the PR body. Anything not run, skipped, or failed stays `[ ]` with a short note.
+
+### Step 3: Formulate PR Title & Body
+
+If a repo-specific PR template exists, populate that instead. Otherwise use:
+
+#### Title Format
+
 `[TYPE](scope): Clear and concise title of the PR`
 
-#### 2. Body Template
+#### Body Template
+
 ```markdown
 ## Summary & Context
-<!-- Provide a 2-4 sentence overview of what this PR accomplishes and why it is needed. -->
+<!-- 2-4 sentence overview of what this PR accomplishes and why. -->
 
 ## Key Changes
-<!-- Group changes by application, package, or domain -->
 ### `apps/web` (or other app)
 - Change item 1
 - Change item 2
@@ -69,37 +102,54 @@ Draft the PR content using the standardized template (strictly without emojis):
 - Change item 1
 
 ## Test Strategy & Verification
-### Automated Tests & Checks
-- [x] `npm run check-types` passed (0 errors across monorepo)
-- [x] Husky pre-commit and commit-msg hooks validated
-- [ ] Automated tests (`npm test` if configured)
+### Automated Checks
+- [ ] Type check — <result or "(not run)">
+- [ ] Lint — <result or "(not run)">
+- [ ] Tests — <result or "(not run)">
+- [ ] Secret scan — <result or "(not run)">
 
 ### Manual Verification Steps
-1. Step-by-step instructions for reviewer to test locally:
+1. Step-by-step instructions for the reviewer to test locally:
    - Run `npm run dev`
    - Navigate to `http://localhost:3000/...`
    - Verify specific UI/API behavior.
 
 ## Review Checklist
-- [x] Follows monorepo code conventions and Husky commit guidelines
-- [x] Architectural documentation / ADR updated (if applicable)
-- [x] No breaking API changes without backward compatibility
-- [x] No exposed secrets or hardcoded tokens
+- [ ] Follows repo code conventions
+- [ ] Architectural documentation / ADR updated (if applicable)
+- [ ] No breaking API changes without backward compatibility
+- [ ] No exposed secrets or hardcoded tokens (verified via scan, not assumed)
 ```
 
----
-
-### Step 3: Present for User Confirmation (Checkpoint)
-1. **STOP AND ASK THE USER:**
-   - Display the proposed PR Title, Base Branch (`master`), Head Branch (`<current-branch>`), and complete PR description.
-   - Ask: *"Would you like me to raise this Pull Request to `master` with the above description and test strategy?"*
-   - Wait for user confirmation or adjustments.
+Only tick boxes that were actually verified in Step 2. Leave everything else unchecked.
 
 ---
 
-### Step 4: Execute PR Creation
-1. Create the PR via GitHub CLI:
+### Step 4: Present for User Confirmation (Checkpoint)
+
+**STOP AND ASK THE USER:**
+
+- Display the proposed PR Title, Base Branch, Head Branch (`<current-branch>`), and complete PR description exactly as it will be submitted.
+- Ask whether this should be a **draft PR** or ready for review.
+- Ask: *"Would you like me to raise this Pull Request with the above description and test strategy?"*
+- Wait for explicit confirmation or requested adjustments before proceeding.
+
+---
+
+### Step 5: Execute PR Creation
+
+1. Push the branch if not already pushed:
+
    ```bash
-   gh pr create --base master --head <current-branch> --title "<title>" --body "<body_content>"
+   git push -u origin <current-branch>
    ```
-2. Return the resulting GitHub Pull Request URL directly in the chat.
+2. Create the PR (add `--draft` if requested in Step 4):
+
+   ```bash
+   gh pr create --base <base-branch> --head <current-branch> --title "<title>" --body "<body_content>"
+   ```
+   Or, if updating an existing PR from Step 1:
+   ```bash
+   gh pr edit <pr-number> --title "<title>" --body "<body_content>"
+   ```
+3. Return the resulting GitHub Pull Request URL directly in the chat.
