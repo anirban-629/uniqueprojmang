@@ -28,6 +28,7 @@ flowchart TB
     end
 
     subgraph SharedPackages["Turborepo Shared Packages (packages/*)"]
+        DB["@flowline/db<br/>Modular Schemas, RLS & Migration Tooling"]
         UI["@flowline/ui<br/>shadcn/ui + Tailwind"]
         Types["@flowline/types<br/>OpenAPI, DTOs & Domain Events"]
         Hooks["@flowline/hooks<br/>TanStack Query Fetchers"]
@@ -42,7 +43,8 @@ flowchart TB
     EventBus --> Auto
     EventBus --> Analytics
 
-    BackendMonolith --> Postgres
+    BackendMonolith --> DB
+    DB --> Postgres
     BackendMonolith --> Redis
     BackendMonolith --> Storage
 
@@ -62,7 +64,8 @@ flowchart TB
    - Read more in [Backend Architecture](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/architecture/backend-architecture.md) and [ADR 0002](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/adr/0002-modular-monolith-boundary.md).
 
 2. **Pooled Multi-Tenancy with Row-Level Security (RLS):**
-   - Mandatory `tenant_id` on all tables enforced by database-level PostgreSQL RLS policies.
+   - Mandatory `tenant_id` on all tables enforced by database-level PostgreSQL RLS policies (`FORCE ROW LEVEL SECURITY`).
+   - Modular SQL migrations partitioned by domain in `@flowline/db` (`packages/db/schemas/`).
    - Read more in [ADR 0001](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/adr/0001-tenancy-model.md).
 
 3. **Scale-Ready Client Architecture (1M+ Users Target):**
