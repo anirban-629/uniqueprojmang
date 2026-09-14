@@ -162,3 +162,40 @@ export interface RealtimeEvent<T = any> {
   timestamp: number;
   payload: T;
 }
+
+export interface TenancyContext {
+  tenantId: string;
+  companyId: string;
+  companyName: string;
+  plan: 'free' | 'pro' | 'enterprise';
+  roles: string[];
+}
+
+export interface DomainEvent<T = Record<string, unknown>> {
+  eventId: string;
+  tenantId: string;
+  eventName: string;
+  occurredAt: string;
+  payload: T;
+}
+
+export interface IssueCreatedEventPayload {
+  issueId: string;
+  key: string;
+  projectId: string;
+  reporterId: string;
+  assigneeId?: string;
+  title: string;
+}
+
+export interface IssueUpdatedEventPayload {
+  issueId: string;
+  key: string;
+  projectId: string;
+  changes: {
+    status?: { from: IssueStatus; to: IssueStatus };
+    priority?: { from: IssuePriority; to: IssuePriority };
+    assigneeId?: { from?: string; to?: string };
+    sprintId?: { from?: string; to?: string };
+  };
+}

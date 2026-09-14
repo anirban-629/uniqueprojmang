@@ -3,17 +3,14 @@ import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 
-import { tenancyPlugin } from './modules/tenancy/tenancy.plugin.js';
-import { issuesRoutes } from './modules/issues/issues.routes.js';
-import { projectsRoutes } from './modules/projects/projects.routes.js';
-import { sprintsRoutes } from './modules/sprints/sprints.routes.js';
-import { commentsRoutes } from './modules/comments/comments.routes.js';
-import { automationRoutes } from './modules/automation/automation.routes.js';
-import { storageRoutes } from './modules/storage/storage.routes.js';
-import { realtimeRoutes } from './modules/realtime/realtime.routes.js';
-import { orgRoutes } from './modules/org/org.routes.js';
-import { usersRoutes } from './modules/users/users.routes.js';
-import { decisionsRoutes } from './modules/decisions/decisions.routes.js';
+import { tenancyPlugin, authRoutes } from './modules/auth/index.js';
+import { coreRoutes } from './modules/core/index.js';
+import { searchRoutes } from './modules/search/index.js';
+import { realtimeRoutes } from './modules/realtime/index.js';
+import { automationRoutes } from './modules/automation/index.js';
+import { aiRoutes } from './modules/ai/index.js';
+import { integrationsRoutes } from './modules/integrations/index.js';
+import { analyticsRoutes } from './modules/analytics/index.js';
 
 const server = Fastify({
   logger: true,
@@ -37,12 +34,12 @@ async function main() {
     openapi: {
       openapi: '3.0.3',
       info: {
-        title: 'Flowline Standalone Backend API',
-        description: 'Independent, multi-tenant API running on Fastify. Built for ~100 independent companies on 100% free resources ($0/month) with Row-Level Security, cursor pagination, and zero cloud Docker overhead.',
+        title: 'Flowline Modular Backend API (Free-Tier Monolith)',
+        description: 'Migration-ready modular monolith built for ~100 independent companies on 100% free resources ($0/month) with Row-Level Security, bounded domain modules, and in-process event bus.',
         version: '1.0.0'
       },
       servers: [
-        { url: 'http://localhost:4000', description: 'Local Standalone Backend' }
+        { url: 'http://localhost:4000', description: 'Local Modular Monolith' }
       ],
       components: {
         securitySchemes: {
@@ -83,32 +80,30 @@ async function main() {
   // 5. Health Check
   server.get('/health', async () => ({
     status: 'ok',
-    service: '@flowline/api',
+    service: '@flowline/api (modular monolith)',
     port: 4000,
     cost: '$0/month',
     uptime: process.uptime()
   }));
 
-  // 6. Domain Routes
-  await server.register(issuesRoutes);
-  await server.register(projectsRoutes);
-  await server.register(sprintsRoutes);
-  await server.register(commentsRoutes);
-  await server.register(automationRoutes);
-  await server.register(storageRoutes);
+  // 6. Register 8 Domain Modules
+  await server.register(authRoutes);
+  await server.register(coreRoutes);
+  await server.register(searchRoutes);
   await server.register(realtimeRoutes);
-  await server.register(orgRoutes);
-  await server.register(usersRoutes);
-  await server.register(decisionsRoutes);
+  await server.register(automationRoutes);
+  await server.register(aiRoutes);
+  await server.register(integrationsRoutes);
+  await server.register(analyticsRoutes);
 
-  // 7. Start Listening
+  // 7. Start Server
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
   const host = process.env.HOST || '0.0.0.0';
 
   try {
     await server.listen({ port, host });
-    console.log(`\n⚡ Flowline Standalone API running at: http://localhost:${port}`);
-    console.log(`📖 Interactive Swagger UI at:         http://localhost:${port}/docs\n`);
+    console.log(`\n⚡ Flowline Modular Backend running at: http://localhost:${port}`);
+    console.log(`📖 Interactive Swagger UI at:          http://localhost:${port}/docs\n`);
   } catch (err) {
     server.log.error(err);
     process.exit(1);
