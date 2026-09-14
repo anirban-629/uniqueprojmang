@@ -1,6 +1,9 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { realtimeHub } from '@flowline/mock-db';
 import { RealtimeEvent } from '@flowline/types';
+import { createChildLogger } from '../../shared/logger.js';
+
+const logger = createChildLogger('realtime-sse');
 
 export function handleSseConnection(
   request: FastifyRequest,
@@ -20,7 +23,7 @@ export function handleSseConnection(
     try {
       reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
     } catch (err) {
-      console.error('SSE write error:', err);
+      logger.error({ err, eventId: event.id }, 'SSE write error');
     }
   };
 

@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 export interface EnvConfig {
   PORT: number;
   HOST: string;
@@ -9,6 +11,10 @@ export interface EnvConfig {
   SUPABASE_STORAGE_BUCKET: string;
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
+  AXIOM_API_TOKEN?: string;
+  AXIOM_DATASET: string;
+  AXIOM_OTLP_ENDPOINT: string;
+  LOG_LEVEL: string;
 }
 
 export function loadEnvConfig(): EnvConfig {
@@ -22,7 +28,11 @@ export function loadEnvConfig(): EnvConfig {
     SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
     SUPABASE_STORAGE_BUCKET: process.env.SUPABASE_STORAGE_BUCKET || 'flowline-attachments',
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
-    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN
+    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
+    AXIOM_API_TOKEN: process.env.AXIOM_API_TOKEN,
+    AXIOM_DATASET: process.env.AXIOM_DATASET || 'flowline-dev',
+    AXIOM_OTLP_ENDPOINT: process.env.AXIOM_OTLP_ENDPOINT || 'https://api.axiom.co/v1/logs',
+    LOG_LEVEL: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug')
   };
 }
 

@@ -1,4 +1,7 @@
 import { AutomationRule } from '@flowline/types';
+import { createChildLogger } from '../../shared/logger.js';
+
+const logger = createChildLogger('automation-evaluator');
 
 export function evaluateRuleSafely(rule: AutomationRule, context: Record<string, unknown>): boolean {
   if (!rule.enabled) return false;
@@ -8,7 +11,7 @@ export function evaluateRuleSafely(rule: AutomationRule, context: Record<string,
     if (rule.condition.includes('in_review') && (context as any).status === 'in_review') return true;
     return true;
   } catch (err) {
-    console.error(`[Automation] Rule evaluation failed for ${rule.id}:`, err);
+    logger.error({ err, ruleId: rule.id }, `Rule evaluation failed for rule "${rule.name}"`);
     return false;
   }
 }

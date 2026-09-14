@@ -1,12 +1,15 @@
-import { FastifyPluginAsync, FastifyRequest } from 'fastify';
+import { randomUUID } from 'crypto';
+import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
 import { TenantContext } from '../shared/types/index.js';
+import { logger } from '../shared/logger.js';
 
-export { TenantContext } from '../shared/types/index.js';
+export type { TenantContext } from '../shared/types/index.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
     companyTenant: TenantContext;
+    traceId: string;
   }
 }
 
@@ -29,7 +32,15 @@ const tenancyPluginAsync: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  fastify.addHook('onRequest', async (request: FastifyRequest) => {
+  fastify.decorateRequest('traceId', '');
+
+  fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+    // 1. Trace ID extraction or generation
+    const headerTraceId = request.headers['x-trace-id'] as string;
+    const traceId = headerTraceId || randomUUID();
+    request.traceId = traceId;
+    reply.header('x-trace-id', traceId);
+
     if (
       request.url.startsWith('/docs') ||
       request.url.startsWith('/openapi.json') ||
@@ -68,6 +79,14 @@ const tenancyPluginAsync: FastifyPluginAsync = async (fastify) => {
       userId,
       role: 'tech_lead'
     };
+
+    // 2. Child request logger with tenant and trace context
+    request.log = logger.child({
+      tenantId: headerTenantId,
+      companyId,
+      userId,
+      traceId
+    });
   });
 };
 
