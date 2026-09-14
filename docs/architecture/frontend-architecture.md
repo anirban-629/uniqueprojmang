@@ -1,6 +1,11 @@
 # Flowline — Next.js Frontend Architecture (Scale-Ready, 1M+ Users)
 
-> Supersedes the earlier React/Vite version. This doc assumes: Next.js App Router, no real backend yet (mock layer via Route Handlers), but every decision is made as if 1M users are live on day one — so nothing needs architectural rework later, only backend swap-in.
+> Supersedes the earlier React/Vite version. This doc assumes: Next.js App Router, mock layer via Route Handlers / packages, but every decision is made as if 1M users are live on day one — so nothing needs architectural rework later, only backend swap-in.
+>
+> **Related Documents:**
+> - [System Overview](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/architecture/system-overview.md)
+> - [Backend Architecture](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/architecture/backend-architecture.md)
+> - [ADR 0002: Next.js App Router & Scaling](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/adr/0002-nextjs-app-router-scale.md)
 
 ---
 
@@ -101,7 +106,7 @@ flowline/
 | Dependency Graph | Client Component, lazy-loaded, virtualized rendering for >200 nodes | React Flow is heavy; must be split out entirely |
 | Admin pages | Server Component, low-traffic | Not worth optimizing aggressively — few users hit this |
 
-**Rule for the agent:** default every new component to a Server Component. Only add `"use client"` when you need interactivity (state, effects, event handlers, browser APIs). This is the single biggest lever for keeping JS bundles small at scale.
+**Rule for the team:** default every new component to a Server Component. Only add `"use client"` when you need interactivity (state, effects, event handlers, browser APIs). This is the single biggest lever for keeping JS bundles small at scale.
 
 ---
 
@@ -127,7 +132,7 @@ Boards must fetch by status/swimlane in bounded pages, not "give me everything a
 Drag-and-drop on a board, editing a field, adding a comment — all should update the UI instantly via React Query's `onMutate`, then reconcile with the server response. At scale, network latency variance is real; waiting for round-trips on every interaction feels broken.
 
 ### 5.5 Rate-limit-aware client
-Even against the mock backend, build request handling assuming `429` responses can happen (add this to a couple of mock handlers deliberately). The client should back off and retry gracefully, not just error out — this behavior needs to exist before real traffic finds the gap.
+Even against the mock backend, build request handling assuming `429` responses can happen. The client should back off and retry gracefully, not just error out — this behavior needs to exist before real traffic finds the gap.
 
 ---
 
@@ -143,21 +148,19 @@ Even against the mock backend, build request handling assuming `429` responses c
 
 ## 7. Real-Time Updates — Next.js-Native (SSE)
 
-Don't build board/issue updates on aggressive polling (`setInterval` fetch every 2s) — this is the fastest way to fall over at 1M concurrent-ish users. Build this natively in Next.js, no external real-time service required for v1:
+Don't build board/issue updates on aggressive polling (`setInterval` fetch every 2s) — this is the fastest way to fall over at 1M concurrent users. Build this natively in Next.js:
 
-- `app/api/realtime/route.ts` returns a `ReadableStream` and sets `Content-Type: text/event-stream`. It pushes an event whenever `mock-db` mutates an issue/board (the same Route Handlers that handle PATCH/POST calls also push to this stream).
+- `app/api/realtime/route.ts` returns a `ReadableStream` and sets `Content-Type: text/event-stream`. It pushes an event whenever `mock-db` mutates an issue/board.
 - Client side: `useRealtimeUpdates(projectId)` opens an `EventSource` connection, and on message, calls `queryClient.invalidateQueries` (or directly patches the React Query cache) so the board/issue UI updates live without a refetch-everything call.
-- Fall back to polling only as a degraded mode if the `EventSource` connection drops repeatedly, not as the primary strategy.
+- Fall back to polling only as a degraded mode if the `EventSource` connection drops repeatedly.
 
-**The one real constraint this creates:** Vercel's serverless functions have execution time limits, and a long-lived SSE connection is, by definition, long-lived. Two paths, pick one now so the agent doesn't build against the wrong assumption:
-- **Path A (simplest, works today):** Deploy on Vercel using their **Edge Runtime** for this specific route (`export const runtime = 'edge'`) — edge functions handle long-lived streaming connections better than standard serverless functions. Fine for moderate concurrent connections.
-- **Path B (needed once real-time concurrency gets large):** Self-host this one route (or the whole app) on a persistent Node server (e.g., a small dedicated service behind the same Next.js app, or a Node server on Railway/Fly/EC2) since a single long-running process can hold many open SSE connections far more cheaply than serverless invocations. You can keep everything else on Vercel and just carve out this one endpoint later — the client-side `useRealtimeUpdates` hook doesn't change either way, only the deployment target of that route.
-
-For now: build Path A. It's zero extra infrastructure and proves the pattern end-to-end. Revisit only when concurrent connection count actually becomes a cost/limit issue.
+**Deployment Strategy:**
+- **Path A (simplest, works today):** Deploy on Vercel using **Edge Runtime** (`export const runtime = 'edge'`).
+- **Path B (once concurrency gets massive):** Self-host this route or use Supabase Realtime / Pusher (see [Backend Architecture](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/architecture/backend-architecture.md)).
 
 ---
 
-## 8. Performance Budgets (enforce these, don't just aspire to them)
+## 8. Performance Budgets
 
 | Metric | Target |
 |---|---|
@@ -167,51 +170,42 @@ For now: build Path A. It's zero extra infrastructure and proves the pattern end
 | Board with 200 visible cards | 60fps scroll, no jank |
 | Heavy libs (charts, graph, gantt) | Always `next/dynamic` with `ssr: false`, never in main bundle |
 
-Add a CI step (even now) that fails the build if a route's JS bundle exceeds budget — catching this at PR time is cheap; catching it after 1M users are on a slow bundle is not.
-
 ---
 
 ## 9. Mock Backend — Built Like a Real One
 
-Route Handlers in `app/api/*` should simulate real-world constraints, not just return convenient data:
-
-- Cursor pagination on every list endpoint (Section 5.1)
-- Randomized latency (150–600ms)
-- Occasional `429` and `500` responses (env-flag controlled) so error/retry UI is real, not theoretical
-- Payload sizes representative of scale (seed 50,000+ issues across projects, not 80 — test your virtualization and pagination against real volume now)
-- Response shape identical to what a real backend would return (`{ data, nextCursor, meta }`), so swapping the base URL later is the *only* change needed
+Route Handlers in `app/api/*` simulate real-world constraints:
+- Cursor pagination on every list endpoint
+- Realistic latency (150–600ms)
+- Occasional `429` and `500` responses (env-flag controlled)
+- Large seeded dataset (50,000+ issues across projects) to test virtualization
+- DTO response shapes matching the target OpenAPI schema (`{ data, nextCursor, meta }`)
 
 ---
 
 ## 10. Auth & Middleware at Scale
 
-- Session validation happens in **Edge Middleware** (`middleware.ts`), not by hitting a database on every request — even in mock form, simulate this by validating a signed cookie/JWT at the edge, not calling `/api/me` on every navigation.
-- Route groups: `(app)` requires auth, `(marketing)` doesn't — enforced in middleware via path matching, not per-page checks.
+- Session validation happens in **Edge Middleware** (`middleware.ts`), not by hitting a database on every request.
+- Route groups: `(app)` requires auth, `(marketing)` doesn't — enforced in middleware via path matching.
 
 ---
 
 ## 11. Observability From Day One
 
-- Wrap the app in Sentry (or equivalent) now, even against the mock backend — catch client errors, failed mutations, slow queries in dev/staging before they're 1M-user incidents.
-- Report Core Web Vitals (`useReportWebVitals`) to your analytics endpoint from the start, so you have a performance baseline before real traffic arrives, not after complaints start.
+- Wrap the app in Sentry (or equivalent) in dev/staging to catch client errors, failed mutations, and slow queries.
+- Report Core Web Vitals (`useReportWebVitals`) to your analytics endpoint from the start.
 
 ---
 
-## 12. Build Order (revised for this architecture)
+## 12. Build Order
 
 1. Turborepo scaffold: `apps/web`, `packages/types`, `packages/ui`, `packages/mock-db`
-2. Mock backend first: seed 50,000+ realistic issues, build cursor-paginated Route Handlers with latency/error simulation
-3. Auth shell + Edge Middleware (even with a fake user/session)
+2. Mock backend first: seed 50,000+ realistic issues, cursor-paginated Route Handlers
+3. Auth shell + Edge Middleware
 4. App shell: Server Component layout, route groups, navigation
-5. Board + Backlog with virtualization + optimistic updates — this page proves your data/caching architecture actually holds up
-6. Real-time: SSE Route Handler (Edge Runtime) + `useRealtimeUpdates` hook, wired into the Board so card moves reflect live — do this right after Board, since it's core UX, not an add-on
+5. Board + Backlog with virtualization + optimistic updates
+6. Real-time: SSE Route Handler (Edge Runtime) + `useRealtimeUpdates` hook
 7. Issue Detail (Server + Client split)
 8. Reports (lazy-loaded charts)
-9. Automation, Dependency Graph, Weather Map, Decision Log (unique features)
-10. Admin/Settings last
-
----
-
-### Instruction block to paste to the AI agent along with this file:
-
-> Build this as a Turborepo monorepo per Section 3. Default every component to a Server Component; only mark `"use client"` when interactivity requires it. Build the mock backend in Section 9 first, with 50,000+ seeded issues and cursor pagination — do not use small/convenient seed data, since the UI must be validated against realistic volume from the start. Every list view must be virtualized and paginated; never fetch or render an unbounded list. Follow the rendering strategy table in Section 4 exactly for each page. Ask before deviating.
+9. Automation, Dependency Graph, Weather Map, Decision Log
+10. Admin/Settings

@@ -1,6 +1,12 @@
-# Flowline Backend Architecture — Zero-Cost Review & Recommendations
+# Flowline Backend Architecture — Zero-Cost Review & Blueprint
 
 > **Constraint & Principle:** This architecture is designed to run reliably for ~100 independent companies (tenants) on **100% free resources ($0/month forever)**. It completely eliminates expensive cloud Docker hosting and heavy self-hosted container clusters, replacing them with production-grade, generous forever-free cloud tiers and integrating **Swagger / OpenAPI** for interactive API documentation and testing.
+>
+> **Related Documents:**
+> - [System Overview](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/architecture/system-overview.md)
+> - [Frontend Architecture](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/architecture/frontend-architecture.md)
+> - [ADR 0001: Serverless vs. Cloud Docker](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/adr/0001-serverless-vs-docker.md)
+> - [OpenAPI Specs & API Contracts](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/api/openapi-specs.md)
 
 ---
 
