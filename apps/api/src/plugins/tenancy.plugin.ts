@@ -3,6 +3,7 @@ import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
 import { TenantContext } from '../shared/types/index.js';
 import { logger } from '../shared/logger.js';
+import { verifyAccessToken } from '../modules/auth/auth.tokens.js';
 
 export type { TenantContext } from '../shared/types/index.js';
 
@@ -10,6 +11,7 @@ declare module 'fastify' {
   interface FastifyRequest {
     companyTenant: TenantContext;
     traceId: string;
+    isAuthenticated: boolean;
   }
 }
 
@@ -33,6 +35,7 @@ const tenancyPluginAsync: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.decorateRequest('traceId', '');
+  fastify.decorateRequest('isAuthenticated', false);
 
   fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
     // 1. Trace ID extraction or generation
@@ -51,41 +54,49 @@ const tenancyPluginAsync: FastifyPluginAsync = async (fastify) => {
     }
 
     const headerCompanyId = request.headers['x-company-id'] as string;
-    const headerTenantId = (request.headers['x-tenant-id'] as string) || headerCompanyId || DEFAULT_TENANT_ID;
+    const headerTenantId = (request.headers['x-tenant-id'] as string) || headerCompanyId;
     const authHeader = request.headers.authorization;
-    let tokenCompanyId: string | null = null;
-    let tokenUserId: string | null = null;
 
+    let verifiedUserId: string | null = null;
+    let verifiedTenantId: string | null = null;
+    let verifiedCompanyId: string | null = null;
+    let verifiedRole: string = 'tech_lead';
+    let isAuthenticated = false;
+
+    // 2. JWT Verification
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7).trim();
       try {
-        const parts = token.split('.');
-        if (parts.length === 3) {
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
-          tokenCompanyId = payload.company_id || payload.app_metadata?.company_id || null;
-          tokenUserId = payload.sub || payload.user_id || null;
-        }
-      } catch {
-        // Fallback gracefully
+        const decoded = verifyAccessToken(token);
+        verifiedUserId = decoded.sub;
+        verifiedTenantId = decoded.tenant_id;
+        verifiedCompanyId = decoded.company_id;
+        verifiedRole = decoded.role;
+        isAuthenticated = true;
+      } catch (err: any) {
+        request.log.debug({ err: err.message }, 'Bearer token verification failed or revoked');
       }
     }
 
-    const companyId = headerCompanyId || tokenCompanyId || DEFAULT_COMPANY_ID;
-    const userId = tokenUserId || (request.headers['x-flowline-user-id'] as string) || DEFAULT_USER_ID;
+    const tenantId = verifiedTenantId || headerTenantId || DEFAULT_TENANT_ID;
+    const companyId = verifiedCompanyId || headerCompanyId || DEFAULT_COMPANY_ID;
+    const userId = verifiedUserId || (request.headers['x-flowline-user-id'] as string) || DEFAULT_USER_ID;
 
+    request.isAuthenticated = isAuthenticated;
     request.companyTenant = {
-      tenantId: headerTenantId,
+      tenantId,
       companyId,
       userId,
-      role: 'tech_lead'
+      role: verifiedRole as any
     };
 
-    // 2. Child request logger with tenant and trace context
+    // 3. Child request logger with tenant, user and trace context
     request.log = logger.child({
-      tenantId: headerTenantId,
+      tenantId,
       companyId,
       userId,
-      traceId
+      traceId,
+      authenticated: isAuthenticated
     });
   });
 };

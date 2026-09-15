@@ -2,7 +2,7 @@ export interface TenantContext {
   tenantId: string;
   companyId: string;
   userId: string;
-  role: 'admin' | 'tech_lead' | 'engineer' | 'product_manager' | 'designer';
+  role: 'owner' | 'admin' | 'tech_lead' | 'engineer' | 'product_manager' | 'designer' | 'member' | 'viewer';
 }
 
 export interface PaginationQuery {
