@@ -411,6 +411,98 @@ export class AuthRepository {
     });
   }
 
+  public async findTenantMembers(tenantId: string): Promise<any[]> {
+    if (this.hasDb()) {
+      try {
+        const query = `
+          SELECT tm.id, tm.tenant_id as "tenantId", tm.user_id as "userId",
+                 COALESCE(tr.name, tm.role) as "role", tm.joined_at as "joinedAt",
+                 u.email, u.full_name as "fullName", u.avatar_url as "avatarUrl", u.status
+          FROM tenant_members tm
+          JOIN users u ON tm.user_id = u.id
+          LEFT JOIN tenant_roles tr ON tm.tenant_role_id = tr.id
+          WHERE (tm.tenant_id = $1 OR tm.tenant_id::text = $1)
+          ORDER BY tm.joined_at ASC;
+        `;
+        const res = await pool.query(query, [tenantId]);
+        return res.rows;
+      } catch (err) {
+        logger.warn({ err, tenantId }, 'DB query failed in findTenantMembers');
+      }
+    }
+
+    return IN_MEMORY_MEMBERSHIPS.filter(m => m.tenantId === tenantId).map(m => ({
+      id: m.id,
+      tenantId: m.tenantId,
+      userId: m.userId,
+      role: m.role,
+      joinedAt: m.joinedAt
+    }));
+  }
+
+  public async countTenantOwners(tenantId: string): Promise<number> {
+    if (this.hasDb()) {
+      try {
+        const query = `
+          SELECT COUNT(*)::int as count
+          FROM tenant_members tm
+          LEFT JOIN tenant_roles tr ON tm.tenant_role_id = tr.id
+          WHERE (tm.tenant_id = $1 OR tm.tenant_id::text = $1)
+            AND (LOWER(COALESCE(tr.name, tm.role)) = 'owner');
+        `;
+        const res = await pool.query(query, [tenantId]);
+        return res.rows[0]?.count || 0;
+      } catch (err) {
+        logger.warn({ err, tenantId }, 'DB query failed in countTenantOwners');
+      }
+    }
+
+    return IN_MEMORY_MEMBERSHIPS.filter(m => m.tenantId === tenantId && m.role === 'owner').length || 1;
+  }
+
+  public async updateMemberRole(tenantId: string, userId: string, newRole: TenantRole): Promise<void> {
+    if (this.hasDb()) {
+      try {
+        // Resolve role ID if exists
+        const roleRes = await pool.query(
+          `SELECT id FROM tenant_roles WHERE (tenant_id = $1 OR tenant_id IS NULL) AND name = $2 LIMIT 1;`,
+          [tenantId, newRole]
+        );
+        const roleId = roleRes.rows[0]?.id || null;
+
+        await pool.query(
+          `UPDATE tenant_members 
+           SET role = $1, tenant_role_id = $2 
+           WHERE user_id = $3 AND (tenant_id = $4 OR tenant_id::text = $4);`,
+          [newRole, roleId, userId, tenantId]
+        );
+        return;
+      } catch (err) {
+        logger.warn({ err, userId, tenantId, newRole }, 'DB query failed in updateMemberRole');
+      }
+    }
+
+    const m = IN_MEMORY_MEMBERSHIPS.find(mem => mem.tenantId === tenantId && mem.userId === userId);
+    if (m) m.role = newRole;
+  }
+
+  public async removeTenantMember(tenantId: string, userId: string): Promise<void> {
+    if (this.hasDb()) {
+      try {
+        await pool.query(
+          `DELETE FROM tenant_members WHERE user_id = $1 AND (tenant_id = $2 OR tenant_id::text = $2);`,
+          [userId, tenantId]
+        );
+        return;
+      } catch (err) {
+        logger.warn({ err, userId, tenantId }, 'DB query failed in removeTenantMember');
+      }
+    }
+
+    const idx = IN_MEMORY_MEMBERSHIPS.findIndex(m => m.tenantId === tenantId && m.userId === userId);
+    if (idx !== -1) IN_MEMORY_MEMBERSHIPS.splice(idx, 1);
+  }
+
   public getUsers(): User[] {
     return mockDb.getUsers();
   }

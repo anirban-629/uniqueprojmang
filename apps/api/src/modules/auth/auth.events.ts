@@ -13,7 +13,8 @@ export const AUTH_EVENTS = {
   USER_LOGGED_IN: 'auth:user_logged_in',
   TENANT_CREATED: 'auth:tenant_created',
   MEMBER_INVITED: 'auth:member_invited',
-  TENANT_SWITCHED: 'auth:tenant_switched'
+  TENANT_SWITCHED: 'auth:tenant_switched',
+  MEMBER_ROLE_CHANGED: 'auth:member_role_changed'
 } as const;
 
 export function publishUserRegistered(payload: UserRegisteredEventPayload): void {
@@ -54,6 +55,24 @@ export function publishMemberInvited(payload: MemberInvitedEventPayload): void {
     eventId: randomUUID(),
     tenantId: payload.tenantId,
     eventName: AUTH_EVENTS.MEMBER_INVITED,
+    occurredAt: new Date().toISOString(),
+    payload
+  };
+  eventBus.publish(event);
+}
+
+export function publishMemberRoleChanged(payload: {
+  tenantId: string;
+  targetUserId: string;
+  actorUserId: string;
+  oldRole: string;
+  newRole: string;
+  projectId?: string;
+}): void {
+  const event: DomainEvent<typeof payload> = {
+    eventId: randomUUID(),
+    tenantId: payload.tenantId,
+    eventName: AUTH_EVENTS.MEMBER_ROLE_CHANGED,
     occurredAt: new Date().toISOString(),
     payload
   };

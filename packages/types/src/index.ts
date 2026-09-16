@@ -200,8 +200,73 @@ export interface IssueUpdatedEventPayload {
   };
 }
 
-export type TenantRole = 'owner' | 'admin' | 'member' | 'viewer';
+export type TenantRole = 'owner' | 'admin' | 'member' | 'billing_manager' | 'viewer' | 'guest';
+export type ProjectRole = 'lead' | 'contributor' | 'reporter' | 'viewer' | 'guest';
 export type MemberStatus = 'active' | 'invited' | 'suspended';
+
+export type PermissionKey =
+  // Tenant Level
+  | 'tenant.view'
+  | 'tenant.update'
+  | 'tenant.delete'
+  | 'members.view'
+  | 'members.manage'
+  | 'members.remove'
+  | 'billing.manage'
+  | 'projects.create'
+  | 'invitations.create'
+  // Project Level
+  | 'project.view'
+  | 'project.update'
+  | 'project.archive'
+  | 'project.delete'
+  | 'project.manage_members'
+  | 'issue.create'
+  | 'issue.view'
+  | 'issue.edit.own'
+  | 'issue.edit.any'
+  | 'issue.delete.own'
+  | 'issue.delete.any'
+  | 'comment.create'
+  | 'comment.delete.own'
+  | 'comment.delete.any';
+
+export interface PermissionRecord {
+  id: string;
+  key: PermissionKey;
+  description: string;
+  scope: 'tenant' | 'project';
+  createdAt?: string;
+}
+
+export interface TenantRoleRecord {
+  id: string;
+  tenantId: string | null;
+  name: TenantRole | string;
+  description?: string;
+  isSystem: boolean;
+  permissions?: PermissionKey[];
+  createdAt?: string;
+}
+
+export interface ProjectRoleRecord {
+  id: string;
+  tenantId: string | null;
+  name: ProjectRole | string;
+  description?: string;
+  isSystem: boolean;
+  permissions?: PermissionKey[];
+  createdAt?: string;
+}
+
+export interface ResolvedPermissions {
+  userId: string;
+  tenantId: string;
+  projectId?: string;
+  tenantRole: TenantRole | string;
+  projectRole?: ProjectRole | string;
+  permissions: PermissionKey[];
+}
 
 export interface Tenant {
   id: string;
@@ -217,6 +282,7 @@ export interface TenantMember {
   tenantId: string;
   userId: string;
   role: TenantRole;
+  tenantRoleId?: string;
   status: MemberStatus;
   invitedAt?: string;
   joinedAt: string;
@@ -241,7 +307,9 @@ export type AuthAuditAction =
   | 'switch_tenant' 
   | 'invite_sent' 
   | 'invite_accepted' 
-  | 'password_changed';
+  | 'password_changed'
+  | 'role_changed'
+  | 'member_removed';
 
 export interface UserRegisteredEventPayload {
   userId: string;
@@ -270,5 +338,14 @@ export interface MemberInvitedEventPayload {
   email: string;
   role: TenantRole;
   invitedBy: string;
+}
+
+export interface MemberRoleChangedEventPayload {
+  tenantId: string;
+  targetUserId: string;
+  actorUserId: string;
+  oldRole: string;
+  newRole: string;
+  projectId?: string;
 }
 

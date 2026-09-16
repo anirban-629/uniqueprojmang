@@ -19,9 +19,11 @@ import {
   publishUserRegistered,
   publishUserLoggedIn,
   publishTenantCreated,
-  publishMemberInvited
+  publishMemberInvited,
+  publishMemberRoleChanged
 } from './auth.events.js';
 import { authRepository, AuthRepository } from './auth.repository.js';
+import { permissionsService } from '../permissions/permissions.service.js';
 import {
   RegisterRequestDto,
   LoginRequestDto,
@@ -535,6 +537,103 @@ export class AuthService {
       tenant,
       memberships
     };
+  }
+
+  public async listTenantMembers(tenantId: string): Promise<any[]> {
+    return this.repository.findTenantMembers(tenantId);
+  }
+
+  public async updateMemberRole(
+    actorUserId: string,
+    tenantId: string,
+    targetUserId: string,
+    newRole: TenantRole
+  ): Promise<{ success: boolean; targetUserId: string; role: TenantRole }> {
+    // 1. Guardrail: Protect last Owner
+    const members = await this.repository.findTenantMembers(tenantId);
+    const targetMember = members.find(m => m.userId === targetUserId);
+
+    if (!targetMember) {
+      throw new NotFoundError('Member not found in workspace');
+    }
+
+    const currentRole = targetMember.role;
+
+    if (currentRole === 'owner' && newRole !== 'owner') {
+      const ownerCount = await this.repository.countTenantOwners(tenantId);
+      if (ownerCount <= 1) {
+        throw new ForbiddenError('Cannot demote the last Owner of the workspace');
+      }
+    }
+
+    // 2. Apply update in DB
+    await this.repository.updateMemberRole(tenantId, targetUserId, newRole);
+
+    // 3. Write security audit log
+    await this.repository.writeAuditLog({
+      tenantId,
+      userId: actorUserId,
+      action: 'role_changed',
+      metadata: { targetUserId, oldRole: currentRole, newRole }
+    });
+
+    // 4. Publish domain event to invalidate permissions cache immediately
+    publishMemberRoleChanged({
+      tenantId,
+      targetUserId,
+      actorUserId,
+      oldRole: currentRole,
+      newRole
+    });
+
+    return { success: true, targetUserId, role: newRole };
+  }
+
+  public async removeTenantMember(
+    actorUserId: string,
+    tenantId: string,
+    targetUserId: string
+  ): Promise<{ success: boolean; removedUserId: string }> {
+    // 1. Guardrail: Protect last Owner
+    const members = await this.repository.findTenantMembers(tenantId);
+    const targetMember = members.find(m => m.userId === targetUserId);
+
+    if (!targetMember) {
+      throw new NotFoundError('Member not found in workspace');
+    }
+
+    if (targetMember.role === 'owner') {
+      const ownerCount = await this.repository.countTenantOwners(tenantId);
+      if (ownerCount <= 1) {
+        throw new ForbiddenError('Cannot remove the last Owner of the workspace');
+      }
+    }
+
+    // 2. Remove member
+    await this.repository.removeTenantMember(tenantId, targetUserId);
+
+    // 3. Audit log
+    await this.repository.writeAuditLog({
+      tenantId,
+      userId: actorUserId,
+      action: 'member_removed',
+      metadata: { targetUserId, removedRole: targetMember.role }
+    });
+
+    // 4. Invalidate permissions & sessions
+    publishMemberRoleChanged({
+      tenantId,
+      targetUserId,
+      actorUserId,
+      oldRole: targetMember.role,
+      newRole: 'none'
+    });
+
+    return { success: true, removedUserId: targetUserId };
+  }
+
+  public async getAllPermissions(): Promise<{ key: string; description: string; scope: string }[]> {
+    return permissionsService.getAllAvailablePermissions();
   }
 
   public async getUsers(): Promise<User[]> {

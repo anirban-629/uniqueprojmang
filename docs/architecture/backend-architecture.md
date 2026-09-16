@@ -37,6 +37,7 @@ The database is structured as 11 self-contained, idempotent domain migration mod
 | :--- | :--- | :--- |
 | `00` | `00_extensions_and_helpers.sql` | `uuid-ossp`, `pgcrypto`, `pg_trgm`, `set_updated_at()` trigger |
 | `01` | `01_auth_and_tenancy.sql` | `tenants`, `users` profile, `tenant_members` & tenant membership RLS |
+| `01b` | `01b_rbac_roles_and_permissions.sql` | `permissions`, `tenant_roles`, `tenant_role_permissions`, `project_roles`, `project_role_permissions` & system seeds |
 | `02` | `02_projects.sql` | `projects`, `project_members` & project-level RLS |
 | `03` | `03_issue_taxonomy.sql` | `issue_types` (hierarchies 0, 1, 2), `issue_statuses`, `priorities` & RLS |
 | `04` | `04_sprints.sql` | `sprints` & sprint planning RLS |
@@ -78,6 +79,7 @@ apps/api/src/
 │
 ├── plugins/
 │   ├── tenancy.plugin.ts        # Tenant extraction & Fastify request decoration
+│   ├── authorization.plugin.ts  # RBAC route hooks: requirePermission, requireAnyPermission
 │   ├── rate-limit.plugin.ts     # Encapsulated sliding-window tenant rate limiter
 │   └── error-handler.plugin.ts  # Global error-to-HTTP status mapping
 │
@@ -108,6 +110,13 @@ apps/api/src/
 │   │   ├── auth.service.ts
 │   │   ├── auth.controller.ts
 │   │   ├── auth.routes.ts
+│   │   └── index.ts
+│   │
+│   ├── permissions/             # Granular RBAC, multi-scope resolution, TTL caching
+│   │   ├── permissions.types.ts
+│   │   ├── permissions.repository.ts
+│   │   ├── permissions.service.ts
+│   │   ├── __tests__/
 │   │   └── index.ts
 │   │
 │   ├── automation/              # Sandboxed rule evaluation, event listeners, idempotency

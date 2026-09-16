@@ -27,3 +27,9 @@ Welcome to the **Flowline** architecture and development documentation. Flowline
 
 ### Developer Guides
 * [**Local Development Guide**](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/guides/local-development.md) — Setup instructions, Turborepo commands, workspace organization, and optional local Docker testing.
+
+---
+
+### Domain Modules
+* [**Module Documentation Index**](file:///d:/INT%20OLD-20260720T064034Z-1-001/INT%20OLD/Playground/uniqueprojmang/docs/modules/README.md) — Master index of all backend domain modules, technical contracts, interfaces, and state lifecycles.
+

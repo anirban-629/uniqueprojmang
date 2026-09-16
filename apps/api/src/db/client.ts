@@ -28,6 +28,25 @@ export const pool = new Pool({
   connectionTimeoutMillis: 10000
 });
 
+pool.on('error', (err) => {
+  // Prevent unhandled background idle client drops from terminating the process
+  console.warn('[DB Pool] Idle client error:', err.message);
+});
+
+const directConnectionString = cleanPostgresUrl(process.env.DIRECT_URL || process.env.DATABASE_URL);
+
+export const directPool = new Pool({
+  connectionString: directConnectionString,
+  ssl: directConnectionString?.includes('localhost') ? false : { rejectUnauthorized: false },
+  max: 2,
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 10000
+});
+
+directPool.on('error', (err) => {
+  console.warn('[DB Direct Pool] Idle client error:', err.message);
+});
+
 export async function checkDatabaseHealth(): Promise<{ status: 'healthy' | 'unhealthy'; latencyMs: number; version?: string; error?: string }> {
   const start = Date.now();
   try {
