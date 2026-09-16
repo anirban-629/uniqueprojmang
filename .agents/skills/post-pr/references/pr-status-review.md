@@ -1,12 +1,3 @@
-
----
-name: pr-status-review
-description: >-
-  Handles PR status review when a PR is not yet merged. Invoked by post-pr. Surfaces the PR's
-  current details and latest review comments, then asks the user whether they want further
-  development, an improvement plan based on feedback, or to hold for now — and acts only on
-  their explicit choice.
----
 # PR Status Review
 
 Invoked after `post-pr` confirms a given PR's `state != "MERGED"` (still open, or closed without merging). Expects a PR number already identified.
@@ -44,7 +35,7 @@ gh api repos/{owner}/{repo}/pulls/<pr-number>/comments --jq '.[] | {author: .use
 
 Do not assume. Present the choice explicitly:
 
-> *"PR #<n></n> is still open. Here's where it stands: [summary from Step 1] and here's the latest feedback: [summary from Step 2].*
+> *"PR #<n> is still open. Here's where it stands: [summary from Step 1] and here's the latest feedback: [summary from Step 2].*
 >
 > *Would you like me to:*
 > *1. Continue development / make further changes now,*

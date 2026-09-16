@@ -30,11 +30,13 @@ Use this skill when asked to check on a previously raised PR's status and act on
 gh pr view <pr-number> --json state,mergedAt,mergeStateStatus,baseRefName,title,url
 ```
 
-- **`state == "MERGED"`** → hand off to **`pr-merge-sync`** (pass the PR's `baseRefName` and number).
-- **`state == "OPEN"`** or **`"CLOSED"` without merge** → hand off to **`pr-status-review`** (pass the PR number).
+- **`state == "MERGED"`** → hand off to [pr-merge-sync](./references/pr-merge-sync.md) (pass the PR's `baseRefName` and number).
+- **`state == "OPEN"`** or **`"CLOSED"` without merge** → hand off to [pr-status-review](./references/pr-status-review.md) (pass the PR number).
 
-Do not duplicate either sub-skill's logic here — this skill's only job is identifying the PR and its merge state, then routing. Keep this orchestrator thin so the two outcomes stay independently maintainable.
+Do not duplicate either sub-routine's logic here — this skill's only job is identifying the PR and its merge state, then routing. Keep this orchestrator thin so the two outcomes stay independently maintainable.
 
 ## Step 3: Route
 
-Explicitly state which path is being taken before proceeding, e.g.: *"PR #42 has been merged — checking with you before syncing your local branch."* or *"PR #42 is still open — let me pull the latest details and comments."* Then invoke the corresponding skill (`pr-merge-sync` or `pr-status-review`).
+Explicitly state which path is being taken before proceeding, e.g.: *"PR #42 has been merged — checking with you before syncing your local branch."* or *"PR #42 is still open — let me pull the latest details and comments."* Then view and follow the corresponding reference guide:
+- For merged PRs: [pr-merge-sync](./references/pr-merge-sync.md)
+- For open / unmerged PRs: [pr-status-review](./references/pr-status-review.md)
