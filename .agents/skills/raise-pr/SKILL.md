@@ -14,13 +14,13 @@ Use this skill when asked to *"raise a PR"*, *"create a pull request"*, *"open a
 
 ## Scope & Rules
 
-1. **Base Branch Detection:** Never hardcode `master`. Detect the repo's actual default branch:
+1. **Base Branch Default (`dev-end`):** Use `dev-end` as the target base branch for all PRs by default (unless explicitly overridden by the user for a specific PR).
 
    ```bash
-   gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
+   # Target base branch: dev-end
    ```
 
-   Fall back to checking for `main` then `master` locally only if the above command fails (e.g., no `gh` auth).
+   If `dev-end` is not present, fall back to checking the repo default via `gh repo view --json defaultBranchRef --jq .defaultBranchRef.name`.
 2. **Interactive Approval:** Always present the generated PR title, body, and test strategy to the user for confirmation before raising the PR.
 3. **No Emojis:** Do not include emojis in generated PR titles or descriptions. Use clean, professional Markdown formatting.
 4. **No Fabricated Checkmarks:** Never mark a checklist item `[x]` unless the corresponding command was actually run in this session and passed. Unverified or skipped items must be shown as `[ ]` with a note (e.g., `(not run)`), never asserted as done.
