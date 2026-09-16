@@ -15,6 +15,7 @@ Use this skill when asked to *"raise a PR"*, *"create a pull request"*, *"open a
 ## Scope & Rules
 
 1. **Base Branch Detection:** Never hardcode `master`. Detect the repo's actual default branch:
+
    ```bash
    gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
    ```
@@ -25,10 +26,16 @@ Use this skill when asked to *"raise a PR"*, *"create a pull request"*, *"open a
 4. **No Fabricated Checkmarks:** Never mark a checklist item `[x]` unless the corresponding command was actually run in this session and passed. Unverified or skipped items must be shown as `[ ]` with a note (e.g., `(not run)`), never asserted as done.
 5. **Respect Existing Templates:** If `.github/PULL_REQUEST_TEMPLATE.md` (or `.gitlab/merge_request_templates/`) exists in the repo, use its structure instead of the default template below.
 6. **High-Quality PR Standards (default template only):** Every PR must include:
+
    - Clear context & problem statement.
    - Grouped bullet points of changes by workspace package/app.
    - Concrete test strategy (actual automated results + manual testing steps).
    - Verification checklist reflecting only what was actually checked.
+7. **Cross-Check Branch & Staging State Against `git-branch-and-push`:** Before doing anything else, consult the conventions defined in the `git-branch-and-push` skill to verify the current state is actually PR-ready:
+
+   - Confirm the current branch is a proper feature/fix branch created per that skill's naming convention (`feat/...`, `fix/...`, `docs/...`, etc.) — **not** `main`/`master` itself.
+   - Confirm all intended changes are actually committed (not merely staged or sitting as uncommitted edits) — a PR should reflect committed history, not a dirty working tree.
+   - If the current state doesn't match what `git-branch-and-push` would consider "ready" (e.g., still on the base branch, or there are uncommitted/unstaged changes), **stop and tell the user**, pointing them to run through `git-branch-and-push` first rather than proceeding with a PR against an incomplete or improperly-branched state. Do not silently fix this yourself (e.g., don't auto-commit or auto-branch) — that's `git-branch-and-push`'s job, with its own permission checkpoints, not this skill's.
 
 ---
 
@@ -38,23 +45,27 @@ Use this skill when asked to *"raise a PR"*, *"create a pull request"*, *"open a
 
 1. Determine the base branch (see Rule 1 above).
 2. Check the current branch:
+
    ```bash
    git branch --show-current
    ```
 
    *If the current branch equals the base branch, stop and notify the user that a PR cannot be created from the base branch to itself.*
 3. Check for uncommitted changes:
+
    ```bash
    git status
    ```
 
    If there are uncommitted changes, ask the user whether to commit them before proceeding.
 4. Inspect commits and diff relative to the base branch:
+
    ```bash
    git log <base>..HEAD --oneline
    git diff <base>..HEAD --stat
    ```
 5. Check for an existing PR on this branch:
+
    ```bash
    gh pr list --head <current-branch> --json url,title,state
    ```
@@ -149,6 +160,7 @@ Only tick boxes that were actually verified in Step 2. Leave everything else unc
    gh pr create --base <base-branch> --head <current-branch> --title "<title>" --body "<body_content>"
    ```
    Or, if updating an existing PR from Step 1:
+
    ```bash
    gh pr edit <pr-number> --title "<title>" --body "<body_content>"
    ```
