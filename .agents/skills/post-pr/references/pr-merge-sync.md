@@ -1,11 +1,3 @@
-
----
-name: pr-merge-sync
-description: >-
-  Handles the post-merge sync workflow. Invoked by post-pr when a PR is found to be merged.
-  Asks for user permission before switching to the base branch and pulling the latest merged code.
-  Never switches branches or pulls without explicit confirmation.
----
 # PR Merge Sync
 
 Invoked after `post-pr` confirms a given PR's `state == "MERGED"`. Do not trigger this directly from user phrasing alone — it expects a PR number and base branch already identified.
@@ -18,7 +10,7 @@ Never run `git checkout` or `git pull` as part of this skill without an explicit
 
 State clearly what merged and what you're proposing to do:
 
-> *"PR #<n></n> (\"\") was merged into `<base-branch>`. Would you like me to:*
+> *"PR #<n> (\"\") was merged into `<base-branch>`. Would you like me to:*
 > *1. Switch your local branch to `<base-branch>`, and*
 > *2. Pull the latest changes (including this merge)?"*
 
