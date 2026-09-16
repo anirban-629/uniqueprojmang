@@ -1,5 +1,5 @@
-import { mockDb } from '@flowline/mock-db';
 import { NotFoundError } from '../../shared/errors/index.js';
+import { coreRepository } from '../core/core.repository.js';
 import { aiJobQueue, AIJobQueue } from './ai.state.js';
 import { executeSummarizeJob } from './ai.worker.js';
 import { AIJob, SummarizeIssueResponseDto } from './ai.types.js';
@@ -11,7 +11,7 @@ export class AIService {
     tenantId: string,
     issueId: string
   ): Promise<SummarizeIssueResponseDto> {
-    const issue = mockDb.getIssueByIdOrKey(issueId);
+    const issue = await coreRepository.getIssueByIdOrKey(issueId);
     if (!issue) {
       throw new NotFoundError(`Issue '${issueId}' not found`);
     }
@@ -24,7 +24,7 @@ export class AIService {
       tenantId,
       type: 'summarize_issue',
       issueId,
-      status: 'completed', // Synchronous mock resolution
+      status: 'completed',
       result,
       createdAt: new Date().toISOString()
     };

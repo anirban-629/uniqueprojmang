@@ -5,13 +5,10 @@ export class SearchService {
   constructor(private readonly repository: SearchRepository = searchRepository) {}
 
   public async searchIssues(dto: SearchIssuesQueryDto): Promise<SearchIssuesResponseDto> {
-    const projectId = dto.projectId || 'proj-flow';
     const limit = dto.limit ? Number(dto.limit) : 20;
 
-    await this.repository.simulateNetwork();
-
-    const results = this.repository.searchIssues({
-      projectId,
+    const results = await this.repository.searchIssues({
+      projectId: dto.projectId,
       search: dto.q,
       limit
     });

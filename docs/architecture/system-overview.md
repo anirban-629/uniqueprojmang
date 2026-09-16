@@ -32,7 +32,6 @@ flowchart TB
         UI["@flowline/ui<br/>shadcn/ui + Tailwind"]
         Types["@flowline/types<br/>OpenAPI, DTOs & Domain Events"]
         Hooks["@flowline/hooks<br/>TanStack Query Fetchers"]
-        MockDB["@flowline/mock-db<br/>Seeders & In-Memory Store"]
         Config["@flowline/config<br/>ESLint, TSConfig, Tailwind"]
     end
 
@@ -51,7 +50,6 @@ flowchart TB
     Browser -.-> UI
     Browser -.-> Hooks
     BackendMonolith -.-> Types
-    BackendMonolith -.-> MockDB
 ```
 
 ---

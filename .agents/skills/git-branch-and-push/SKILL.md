@@ -1,4 +1,3 @@
-
 ---
 name: git-branch-and-push
 description: >-
@@ -68,8 +67,6 @@ You must **NEVER** run branch creation, commits, code review, or pushes autonomo
 
 ```text
 [TYPE](scope): <imperative mood summary>
-
-[optional body with details]
 ```
 
 #### Valid Types (Must be UPPERCASE):

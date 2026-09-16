@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { realtimeHub } from '@flowline/mock-db';
+import { realtimeHub } from './realtime.hub.js';
 import { RealtimeEvent } from '@flowline/types';
 import { createChildLogger } from '../../shared/logger.js';
 

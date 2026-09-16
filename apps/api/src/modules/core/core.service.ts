@@ -19,11 +19,9 @@ export class CoreService {
     tenantId: string,
     query: ListIssuesQueryDto
   ): Promise<PaginatedIssuesResponse> {
-    const projectId = query.projectId || 'proj-flow';
-    const latency = await this.repository.simulateNetwork({ chaos: query.chaos === true });
-
-    const result = this.repository.queryIssues({
-      projectId,
+    const startTime = Date.now();
+    const result = await this.repository.queryIssues({
+      projectId: query.projectId || '',
       status: query.status,
       sprintId: query.sprintId,
       assigneeId: query.assigneeId,
@@ -38,15 +36,14 @@ export class CoreService {
       ...result,
       meta: {
         serverTime: Date.now(),
-        latencyMs: latency,
+        latencyMs: Date.now() - startTime,
         tenantId
       }
     };
   }
 
   public async getIssueByIdOrKey(idOrKey: string): Promise<Issue> {
-    await this.repository.simulateNetwork();
-    const issue = this.repository.getIssueByIdOrKey(idOrKey);
+    const issue = await this.repository.getIssueByIdOrKey(idOrKey);
     if (!issue) {
       throw new NotFoundError(`Issue '${idOrKey}' not found`);
     }
@@ -58,10 +55,9 @@ export class CoreService {
     reporterId: string,
     dto: CreateIssueDto
   ): Promise<Issue> {
-    await this.repository.simulateNetwork();
-    const newIssue = this.repository.createIssue({
+    const newIssue = await this.repository.createIssue(tenantId, {
       ...dto,
-      reporterId: reporterId || 'usr-alex'
+      reporterId: reporterId || '10000000-0000-0000-0000-000000000001'
     });
 
     this.events.publishIssueCreated(tenantId, newIssue);
@@ -73,8 +69,7 @@ export class CoreService {
     id: string,
     updates: UpdateIssueDto
   ): Promise<Issue> {
-    await this.repository.simulateNetwork();
-    const updated = this.repository.updateIssue(id, updates);
+    const updated = await this.repository.updateIssue(id, updates);
     if (!updated) {
       throw new NotFoundError(`Issue '${id}' not found`);
     }
@@ -83,18 +78,15 @@ export class CoreService {
     return updated;
   }
 
-  public async getProjects(): Promise<Project[]> {
-    await this.repository.simulateNetwork();
-    return this.repository.getProjects();
+  public async getProjects(tenantId?: string): Promise<Project[]> {
+    return this.repository.getProjects(tenantId);
   }
 
-  public async getSprints(projectId = 'proj-flow'): Promise<Sprint[]> {
-    await this.repository.simulateNetwork();
+  public async getSprints(projectId?: string): Promise<Sprint[]> {
     return this.repository.getSprints(projectId);
   }
 
   public async getComments(issueId: string): Promise<Comment[]> {
-    await this.repository.simulateNetwork();
     return this.repository.getComments(issueId);
   }
 
@@ -104,14 +96,17 @@ export class CoreService {
     authorId: string,
     body: string
   ): Promise<Comment> {
-    await this.repository.simulateNetwork();
-    const comment = this.repository.addComment(issueId, authorId || 'usr-alex', body);
+    const comment = await this.repository.addComment(
+      tenantId,
+      issueId,
+      authorId || '10000000-0000-0000-0000-000000000001',
+      body
+    );
     this.events.publishCommentAdded(tenantId, issueId, comment);
     return comment;
   }
 
-  public async getDecisions(projectId = 'proj-flow'): Promise<DecisionRecord[]> {
-    await this.repository.simulateNetwork();
+  public async getDecisions(projectId?: string): Promise<DecisionRecord[]> {
     return this.repository.getDecisions(projectId);
   }
 }

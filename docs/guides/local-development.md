@@ -20,8 +20,8 @@
    ```
    This will start:
    - Next.js Web App: `http://localhost:3000`
-   - Route Handlers & Mock DB: `http://localhost:3000/api/*`
-   - Swagger Documentation: `http://localhost:3000/api/docs`
+   - Fastify Backend API: `http://localhost:4000`
+   - Swagger Documentation: `http://localhost:4000/docs`
 
 3. **Build the Monorepo:**
    ```bash
@@ -35,13 +35,12 @@
 ```text
 ├── apps/
 │   ├── web/         # Next.js 15 App Router Frontend
-│   └── api/         # Standalone API / Backend service
+│   └── api/         # Fastify Modular Monolith Backend service
 └── packages/
     ├── ui/          # Shared shadcn/ui components
     ├── types/       # Shared TypeScript types & DTOs
-    ├── mock-db/     # In-memory realistic dataset generator
     ├── hooks/       # React Query hooks & data fetchers
-    ├── db/          # Database clients (Drizzle/Prisma/Supabase)
+    ├── db/          # Database client, PostgreSQL schemas & seeders
     └── config/      # Shared Tailwind, ESLint, TSConfig
 ```
 

@@ -20,7 +20,6 @@ async function fetchFromApi<T>(path: string, options?: RequestInit): Promise<T> 
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        'x-company-id': 'a0000000-0000-0000-0000-000000000001', // Default Acme tenant
         ...(options?.headers || {})
       },
       cache: 'no-store'
@@ -33,8 +32,7 @@ async function fetchFromApi<T>(path: string, options?: RequestInit): Promise<T> 
 
     return await res.json();
   } catch (err: any) {
-    console.warn(`[Flowline API Client] Failed to fetch ${url}:`, err.message);
-    // Return empty fallback array/null to keep rendering resilient if API server is temporarily offline
+    console.warn(`[Flowline API Client] Request error for ${url}:`, err.message);
     return (path.includes('?') || path.endsWith('s') ? [] : null) as unknown as T;
   }
 }

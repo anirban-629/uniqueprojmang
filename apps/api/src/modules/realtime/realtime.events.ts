@@ -1,5 +1,5 @@
 import { eventBus } from '../../shared/event-bus.js';
-import { realtimeHub } from '@flowline/mock-db';
+import { realtimeHub } from './realtime.hub.js';
 
 export function registerRealtimeEventListeners(): void {
   eventBus.subscribe('issue:updated', (event) => {
