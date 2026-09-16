@@ -123,3 +123,45 @@ export async function listCompanies(
   const companies = await authService.getCompanies();
   return reply.send(companies);
 }
+
+export async function listTenantMembers(
+  request: FastifyRequest<{ Params: { tenantId: string } }>,
+  reply: FastifyReply
+) {
+  const members = await authService.listTenantMembers(request.params.tenantId);
+  return reply.status(200).send(members);
+}
+
+export async function updateMemberRole(
+  request: FastifyRequest<{ Params: { tenantId: string; userId: string }; Body: { role: any } }>,
+  reply: FastifyReply
+) {
+  const result = await authService.updateMemberRole(
+    request.companyTenant.userId,
+    request.params.tenantId,
+    request.params.userId,
+    request.body.role
+  );
+  return reply.status(200).send(result);
+}
+
+export async function removeMember(
+  request: FastifyRequest<{ Params: { tenantId: string; userId: string } }>,
+  reply: FastifyReply
+) {
+  const result = await authService.removeTenantMember(
+    request.companyTenant.userId,
+    request.params.tenantId,
+    request.params.userId
+  );
+  return reply.status(200).send(result);
+}
+
+export async function listPermissions(
+  _request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const permissions = await authService.getAllPermissions();
+  return reply.status(200).send(permissions);
+}
+

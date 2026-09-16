@@ -197,6 +197,61 @@ export const logoutAllSchema: FastifySchema = {
   description: 'Revokes all active refresh token families for user.'
 };
 
+export const listTenantMembersSchema: FastifySchema = {
+  tags: ['Auth & Roles (RBAC)'],
+  summary: 'List Workspace Members with Roles',
+  description: 'Lists all users in workspace with assigned roles. Requires members.view permission.',
+  params: {
+    type: 'object',
+    required: ['tenantId'],
+    properties: {
+      tenantId: { type: 'string' }
+    }
+  }
+};
+
+export const updateMemberRoleSchema: FastifySchema = {
+  tags: ['Auth & Roles (RBAC)'],
+  summary: 'Update Member Role',
+  description: 'Changes a user role within the workspace. Protected by last-owner guardrail. Requires members.manage permission.',
+  params: {
+    type: 'object',
+    required: ['tenantId', 'userId'],
+    properties: {
+      tenantId: { type: 'string' },
+      userId: { type: 'string' }
+    }
+  },
+  body: {
+    type: 'object',
+    required: ['role'],
+    properties: {
+      role: { type: 'string', enum: ['owner', 'admin', 'member', 'billing_manager', 'viewer', 'guest'] }
+    }
+  }
+};
+
+export const removeMemberSchema: FastifySchema = {
+  tags: ['Auth & Roles (RBAC)'],
+  summary: 'Remove Member from Workspace',
+  description: 'Removes user access from workspace. Protected by last-owner guardrail. Requires members.remove permission.',
+  params: {
+    type: 'object',
+    required: ['tenantId', 'userId'],
+    properties: {
+      tenantId: { type: 'string' },
+      userId: { type: 'string' }
+    }
+  }
+};
+
+export const listPermissionsSchema: FastifySchema = {
+  tags: ['Auth & Roles (RBAC)'],
+  summary: 'List All Registered Permissions',
+  description: 'Returns the master catalog of all tenant and project permission flags.'
+};
+
+
 export const listUsersSchema: FastifySchema = {
   tags: ['Auth & Users'],
   summary: 'List Workspace Users',

@@ -153,3 +153,18 @@ export interface ListSessionsRoute {}
 export interface LogoutRoute {
   Body?: { refreshToken?: string };
 }
+
+export interface ListTenantMembersRoute {
+  Params: { tenantId: string };
+}
+
+export interface UpdateMemberRoleRoute {
+  Params: { tenantId: string; userId: string };
+  Body: { role: TenantRole };
+}
+
+export interface RemoveMemberRoute {
+  Params: { tenantId: string; userId: string };
+}
+
+export interface ListPermissionsRoute {}
