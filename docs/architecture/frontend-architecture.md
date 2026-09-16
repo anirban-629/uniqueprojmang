@@ -83,7 +83,7 @@ flowline/
 │   ├── ui/                         # Shared shadcn/ui-based component library
 │   ├── types/                      # Shared TS types/interfaces (Issue, Sprint, User...)
 │   ├── config/                     # Shared eslint/tailwind/tsconfig
-│   ├── mock-db/                    # In-memory data store + seed generators, used by route handlers
+│   ├── db/                         # PostgreSQL client, RLS schemas & seeders
 │   └── hooks/                      # Shared data-fetching hooks (useIssues, useBoard, etc.)
 │
 ├── turbo.json

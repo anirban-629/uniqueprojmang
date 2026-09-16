@@ -49,10 +49,11 @@ export async function updateIssue(
 }
 
 export async function listProjects(
-  _request: FastifyRequest<ListProjectsRoute>,
+  request: FastifyRequest<ListProjectsRoute>,
   reply: FastifyReply
 ) {
-  const projects = await coreService.getProjects();
+  const tenantId = request.companyTenant?.companyId || request.companyTenant?.tenantId;
+  const projects = await coreService.getProjects(tenantId);
   return reply.send(projects);
 }
 

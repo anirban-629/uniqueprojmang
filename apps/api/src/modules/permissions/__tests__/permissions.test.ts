@@ -1,13 +1,14 @@
 import { permissionsService } from '../permissions.service.js';
 
 async function testRbac() {
-  console.log('--- Testing Data-Driven RBAC Permission Resolution ---\n');
+  console.log('--- Testing Data-Driven RBAC Permission Resolution on PostgreSQL ---\n');
 
-  const userId = 'u0000000-0000-0000-0000-000000000001';
+  // Alex Chen (Owner of Acme, Lead of Flowline Core Engine)
+  const userId = '10000000-0000-0000-0000-000000000001';
   const tenantId = 'a0000000-0000-0000-0000-000000000001';
-  const projectId = 'p0000000-0000-0000-0000-000000000001';
+  const projectId = '20000000-0000-0000-0000-000000000001';
 
-  // 1. Resolve Tenant Permissions (Owner default)
+  // 1. Resolve Tenant Permissions (Owner)
   const tenantPerms = await permissionsService.resolveUserPermissions(userId, tenantId);
   console.log('1. Tenant Permissions (Owner):', Array.from(tenantPerms));
   console.assert(tenantPerms.has('tenant.update'), 'Owner should have tenant.update');
@@ -27,9 +28,10 @@ async function testRbac() {
 
   // 4. List All Available Permissions
   const allPerms = await permissionsService.getAllAvailablePermissions();
-  console.log('\n4. Total Registered Permissions:', allPerms.length);
+  console.log('\n4. Total Registered Permissions in DB:', allPerms.length);
 
-  console.log('\nAll RBAC unit tests passed successfully!');
+  console.log('\nAll RBAC unit tests passed successfully against real PostgreSQL database!');
+  process.exit(0);
 }
 
 testRbac().catch(err => {

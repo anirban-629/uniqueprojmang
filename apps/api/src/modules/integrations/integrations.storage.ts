@@ -10,7 +10,7 @@ export class StorageHelper {
     const timestamp = Date.now();
     const bucket = env.SUPABASE_STORAGE_BUCKET || 'attachments';
     const filePath = `tenants/${tenantId}/${dto.issueId || 'general'}/${timestamp}-${sanitized}`;
-    const supabaseUrl = env.SUPABASE_URL || 'https://mock.supabase.co';
+    const supabaseUrl = env.SUPABASE_URL || '';
 
     return {
       bucket,

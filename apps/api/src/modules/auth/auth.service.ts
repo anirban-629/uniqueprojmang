@@ -637,7 +637,6 @@ export class AuthService {
   }
 
   public async getUsers(): Promise<User[]> {
-    await this.repository.simulateNetwork();
     return this.repository.getUsers();
   }
 

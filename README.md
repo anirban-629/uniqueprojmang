@@ -45,9 +45,8 @@ flowline/
 ├── packages/
 │   ├── ui/           # Shared shadcn/ui Component Library
 │   ├── types/        # Shared TypeScript Interfaces & DTOs
-│   ├── mock-db/      # In-Memory Database & Seeder for 50k+ records
 │   ├── hooks/        # React Query Hooks & Cache Invalidation
-│   ├── db/           # Database Client & ORM Configurations
+│   ├── db/           # Database Client, Modular Migrations & Seeders
 │   └── config/       # Shared ESLint, TSConfig, and Tailwind Configs
 ├── docs/             # Central Documentation Hub
 ├── docker-compose.yml # Optional local offline database/cache

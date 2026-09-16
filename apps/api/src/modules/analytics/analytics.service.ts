@@ -6,18 +6,11 @@ export class AnalyticsService {
   constructor(private readonly repository: AnalyticsRepository = analyticsRepository) {}
 
   public async getWeatherMap(): Promise<OrgWeatherMapSummary[]> {
-    await this.repository.simulateNetwork();
     return this.repository.getWeatherMapSummaries();
   }
 
   public async getVelocityMetrics(): Promise<VelocityMetricsDto> {
-    await this.repository.simulateNetwork();
-    return {
-      averageVelocity: 38.5,
-      trend: 'up',
-      completedPointsLast3Sprints: [34, 40, 42],
-      predictedCompletionDate: new Date(Date.now() + 14 * 86400000).toISOString()
-    };
+    return this.repository.getVelocityMetrics();
   }
 }
 
