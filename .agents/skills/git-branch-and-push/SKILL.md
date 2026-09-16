@@ -92,7 +92,7 @@ You must **NEVER** run branch creation, commits, code review, or pushes autonomo
 1. Check whether the `code-reviewer` skill has already been run against this exact commit/diff earlier in the session.
    - If yes, ask the user: *"This diff was already reviewed earlier — would you like me to re-run the review, or use the existing result?"*
    - If no, proceed to invoke it automatically — this step is not optional and does not require a separate user request to trigger.
-2. Invoke the `code-reviewer` skill against the committed changes on this branch (compare against the base branch, e.g. `git diff <base>..HEAD`).
+2. Invoke the `code-reviewer` skill against the committed changes on this branch (compare against the base branch `dev-end`, e.g. `git diff dev-end..HEAD` or `git diff origin/dev-end..HEAD`).
 3. Present the full review output (Summary, Critical, Improvements, Nitpicks, Verdict) to the user.
 4. Branch on the verdict:
    - **APPROVE** → proceed directly to Checkpoint 4.
