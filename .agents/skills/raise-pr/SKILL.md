@@ -154,14 +154,14 @@ Only tick boxes that were actually verified in Step 2. Leave everything else unc
    ```bash
    git push -u origin <current-branch>
    ```
-2. Create the PR (add `--draft` if requested in Step 4):
+2. Create the PR (add `--draft` if requested in Step 4). To prevent shell/PowerShell backtick mangling, write the body to a file (e.g., in `<appDataDir>/scratch/pr_body.md`) and pass `--body-file`:
 
    ```bash
-   gh pr create --base <base-branch> --head <current-branch> --title "<title>" --body "<body_content>"
+   gh pr create --base <base-branch> --head <current-branch> --title "<title>" --body-file "<path-to-body-file>"
    ```
    Or, if updating an existing PR from Step 1:
 
    ```bash
-   gh pr edit <pr-number> --title "<title>" --body "<body_content>"
+   gh pr edit <pr-number> --title "<title>" --body-file "<path-to-body-file>"
    ```
 3. Return the resulting GitHub Pull Request URL directly in the chat.
