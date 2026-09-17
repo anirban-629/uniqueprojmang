@@ -12,7 +12,7 @@ export function RegisterForm() {
   const { register } = useAuth();
 
   const [fullName, setFullName] = useState('');
-  const [tenantName, setTenantName] = useState('');
+  const [organizationName, setOrganizationName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -22,8 +22,8 @@ export function RegisterForm() {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long');
+    if (password.length < 10) {
+      setError('Password must be at least 10 characters long');
       return;
     }
 
@@ -32,7 +32,7 @@ export function RegisterForm() {
     try {
       await register({
         fullName,
-        tenantName,
+        organizationName,
         email,
         password,
       });
@@ -45,27 +45,27 @@ export function RegisterForm() {
   };
 
   return (
-    <Card className="w-full max-w-md border-slate-800/80 bg-slate-900/90 shadow-2xl backdrop-blur-xl">
+    <Card className="w-full max-w-md border-border bg-card/90 shadow-2xl backdrop-blur-xl">
       <CardHeader className="space-y-1 text-center">
-        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
           <Building2 className="h-6 w-6" />
         </div>
-        <CardTitle className="text-2xl font-bold text-slate-100">Create Workspace</CardTitle>
-        <CardDescription className="text-slate-400">
-          Get started with multi-tenant agile management
+        <CardTitle className="text-2xl font-bold text-foreground">Create Workspace</CardTitle>
+        <CardDescription className="text-muted-foreground">
+          Start a new organization with agile project management
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-3.5">
           {error && (
-            <div className="flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-400">
+            <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-300">Your Full Name</label>
+            <label className="text-xs font-medium text-foreground">Your Full Name</label>
             <div className="relative">
               <Input
                 type="text"
@@ -75,27 +75,27 @@ export function RegisterForm() {
                 required
                 className="pl-9"
               />
-              <UserIcon className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+              <UserIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-300">Workspace / Company Name</label>
+            <label className="text-xs font-medium text-foreground">Organization / Workspace Name</label>
             <div className="relative">
               <Input
                 type="text"
                 placeholder="Acme Corp"
-                value={tenantName}
-                onChange={(e) => setTenantName(e.target.value)}
+                value={organizationName}
+                onChange={(e) => setOrganizationName(e.target.value)}
                 required
                 className="pl-9"
               />
-              <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+              <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-300">Work Email</label>
+            <label className="text-xs font-medium text-foreground">Work Email</label>
             <div className="relative">
               <Input
                 type="email"
@@ -105,45 +105,45 @@ export function RegisterForm() {
                 required
                 className="pl-9"
               />
-              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-300">Password (min 8 chars)</label>
+            <label className="text-xs font-medium text-foreground">Password (min 10 characters)</label>
             <div className="relative">
               <Input
                 type="password"
-                placeholder="••••••••"
+                placeholder="••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="pl-9"
               />
-              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             </div>
           </div>
 
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full justify-center bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-lg transition-all"
+            className="w-full justify-center bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 rounded-lg transition-all"
           >
             {isSubmitting ? (
               <span className="flex items-center gap-2">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Setting up...
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                Setting up workspace...
               </span>
             ) : (
               <span className="flex items-center gap-2">
-                Create Account <ArrowRight className="h-4 w-4" />
+                Create Organization <ArrowRight className="h-4 w-4" />
               </span>
             )}
           </Button>
 
-          <div className="pt-2 text-center text-xs text-slate-400">
+          <div className="pt-2 text-center text-xs text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/login" className="font-semibold text-indigo-400 hover:text-indigo-300">
+            <Link href="/login" className="font-semibold text-primary hover:underline">
               Sign in
             </Link>
           </div>

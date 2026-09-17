@@ -48,9 +48,9 @@ export function TenantSwitcher() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={isLoading || isSwitching}
-        className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800/80 hover:border-slate-700 transition-all"
+        className="flex items-center gap-2 rounded-lg border border-border bg-card/80 px-3 py-1.5 text-xs text-foreground hover:bg-muted/80 hover:border-border transition-all"
       >
-        <Building2 className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+        <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
         <span className="max-w-[120px] truncate font-medium">
           {activeMembership?.name || currentTenant?.tenantId || 'Default Workspace'}
         </span>
@@ -59,12 +59,12 @@ export function TenantSwitcher() {
             {currentTenant.role}
           </Badge>
         )}
-        <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-1.5 w-56 rounded-xl border border-slate-800 bg-slate-900/95 p-1.5 shadow-2xl backdrop-blur-xl z-50">
-          <div className="px-2 py-1 text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
+        <div className="absolute left-0 mt-1.5 w-56 rounded-xl border border-border bg-card/95 p-1.5 shadow-2xl backdrop-blur-xl z-50">
+          <div className="px-2 py-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
             Workspaces
           </div>
 
@@ -80,25 +80,25 @@ export function TenantSwitcher() {
                   onClick={() => handleSelectTenant(membership.slug || membership.companyId)}
                   className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs transition-colors ${
                     isSelected
-                      ? 'bg-indigo-600/15 text-indigo-300 font-medium'
-                      : 'text-slate-300 hover:bg-slate-800/60 hover:text-slate-100'
+                      ? 'bg-primary/15 text-primary font-medium'
+                      : 'text-foreground hover:bg-muted/60'
                   }`}
                 >
                   <div className="flex flex-col truncate">
-                    <span className="truncate">{membership.name}</span>
-                    <span className="text-[10px] text-slate-500 capitalize">{membership.role}</span>
+                    <span className="truncate font-medium">{membership.name}</span>
+                    <span className="text-[10px] text-muted-foreground capitalize">{membership.role}</span>
                   </div>
-                  {isSelected && <Check className="h-3.5 w-3.5 text-indigo-400 shrink-0" />}
+                  {isSelected && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
                 </button>
               );
             })}
           </div>
 
-          <div className="mt-1.5 border-t border-slate-800/80 pt-1.5">
+          <div className="mt-1.5 border-t border-border pt-1.5">
             <Link
               href="/register"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 transition-colors"
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>Create new workspace</span>

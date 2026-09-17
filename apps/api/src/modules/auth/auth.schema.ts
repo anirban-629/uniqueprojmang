@@ -6,14 +6,16 @@ export const registerSchema: FastifySchema = {
   description: 'Create a new user account, initialize a tenant workspace, and assign owner role.',
   body: {
     type: 'object',
-    required: ['email', 'password', 'fullName', 'organizationName'],
+    required: ['email', 'password', 'fullName'],
     additionalProperties: false,
     properties: {
       email: { type: 'string', format: 'email' },
       password: { type: 'string', minLength: 10 },
       fullName: { type: 'string', minLength: 2 },
       organizationName: { type: 'string', minLength: 2 },
-      organizationSlug: { type: 'string', minLength: 2, pattern: '^[a-z0-9-]+$' }
+      organizationSlug: { type: 'string', minLength: 2, pattern: '^[a-z0-9-]+$' },
+      tenantName: { type: 'string', minLength: 2 },
+      tenantSlug: { type: 'string', minLength: 2, pattern: '^[a-z0-9-]+$' }
     }
   },
   response: {
@@ -60,6 +62,7 @@ export const registerSchema: FastifySchema = {
     }
   }
 };
+
 
 export const loginSchema: FastifySchema = {
   tags: ['Auth & Users'],
@@ -178,6 +181,49 @@ export const acceptInviteSchema: FastifySchema = {
     }
   }
 };
+
+export const getInviteDetailsSchema: FastifySchema = {
+  tags: ['Auth & Users'],
+  summary: 'Get Invitation Details',
+  description: 'Validates invitation token and returns tenant, inviter, and role details.',
+  params: {
+    type: 'object',
+    required: ['token'],
+    properties: {
+      token: { type: 'string' }
+    }
+  }
+};
+
+export const forgotPasswordSchema: FastifySchema = {
+  tags: ['Auth & Users'],
+  summary: 'Request Password Reset',
+  description: 'Initiates password reset process and sends enumeration-safe response.',
+  body: {
+    type: 'object',
+    required: ['email'],
+    additionalProperties: false,
+    properties: {
+      email: { type: 'string', format: 'email' }
+    }
+  }
+};
+
+export const resetPasswordSchema: FastifySchema = {
+  tags: ['Auth & Users'],
+  summary: 'Reset Password with Token',
+  description: 'Resets user password and revokes all active sessions.',
+  body: {
+    type: 'object',
+    required: ['token', 'newPassword'],
+    additionalProperties: false,
+    properties: {
+      token: { type: 'string' },
+      newPassword: { type: 'string', minLength: 10 }
+    }
+  }
+};
+
 
 export const listSessionsSchema: FastifySchema = {
   tags: ['Auth & Users'],
