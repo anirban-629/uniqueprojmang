@@ -9,7 +9,7 @@ export class SearchRepository {
     let idx = 1;
 
     if (query.projectId) {
-      conditions.push(`(i.project_id = $${idx} OR i.project_id::text = $${idx})`);
+      conditions.push(`i.project_id::text = $${idx}`);
       values.push(query.projectId);
       idx++;
     }

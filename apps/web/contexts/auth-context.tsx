@@ -99,7 +99,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      await authClient.login({ email, password });
+      const res = await authClient.login({ email, password });
+      if (typeof document !== 'undefined' && res.accessToken) {
+        document.cookie = `flowline_session=${res.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+        document.cookie = `access_token=${res.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+        if (res.tenant?.slug || res.tenant?.id) {
+          document.cookie = `flowline_tenant_id=${res.tenant.slug || res.tenant.id}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+        }
+      }
       await queryClient.invalidateQueries({ queryKey: ['session'] });
     },
     [queryClient]
@@ -107,7 +114,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = useCallback(
     async (payload: RegisterRequestPayload) => {
-      await authClient.register(payload);
+      const res = await authClient.register(payload);
+      if (typeof document !== 'undefined' && res.accessToken) {
+        document.cookie = `flowline_session=${res.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+        document.cookie = `access_token=${res.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+        if (res.tenant?.slug || res.tenant?.id) {
+          document.cookie = `flowline_tenant_id=${res.tenant.slug || res.tenant.id}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+        }
+      }
       await queryClient.invalidateQueries({ queryKey: ['session'] });
     },
     [queryClient]
@@ -115,7 +129,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const acceptInvite = useCallback(
     async (payload: AcceptInviteRequestPayload) => {
-      await authClient.acceptInvite(payload);
+      const res = await authClient.acceptInvite(payload);
+      if (typeof document !== 'undefined' && res.accessToken) {
+        document.cookie = `flowline_session=${res.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+        document.cookie = `access_token=${res.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+        if (res.tenant?.slug || res.tenant?.id) {
+          document.cookie = `flowline_tenant_id=${res.tenant.slug || res.tenant.id}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+        }
+      }
       await queryClient.invalidateQueries({ queryKey: ['session'] });
     },
     [queryClient]
@@ -127,6 +148,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Ignore network errors during logout
     } finally {
+      if (typeof document !== 'undefined') {
+        document.cookie = 'flowline_session=; path=/; max-age=0';
+        document.cookie = 'access_token=; path=/; max-age=0';
+        document.cookie = 'flowline_tenant_id=; path=/; max-age=0';
+        document.cookie = 'flowline_user_id=; path=/; max-age=0';
+        document.cookie = 'flowline_role=; path=/; max-age=0';
+      }
       queryClient.clear();
       window.location.href = '/login';
     }
@@ -138,6 +166,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Ignore network errors during logout-all
     } finally {
+      if (typeof document !== 'undefined') {
+        document.cookie = 'flowline_session=; path=/; max-age=0';
+        document.cookie = 'access_token=; path=/; max-age=0';
+        document.cookie = 'flowline_tenant_id=; path=/; max-age=0';
+        document.cookie = 'flowline_user_id=; path=/; max-age=0';
+        document.cookie = 'flowline_role=; path=/; max-age=0';
+      }
       queryClient.clear();
       window.location.href = '/login';
     }
@@ -145,7 +180,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const switchTenant = useCallback(
     async (targetTenantId: string) => {
-      await authClient.switchTenant(targetTenantId);
+      const res = await authClient.switchTenant(targetTenantId);
+      if (typeof document !== 'undefined' && res.accessToken) {
+        document.cookie = `flowline_session=${res.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+        document.cookie = `access_token=${res.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+        document.cookie = `flowline_tenant_id=${targetTenantId}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+      }
       try {
         localStorage.setItem(LAST_TENANT_KEY, targetTenantId);
       } catch {

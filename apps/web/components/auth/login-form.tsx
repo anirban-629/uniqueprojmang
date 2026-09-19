@@ -26,6 +26,7 @@ export function LoginForm() {
     try {
       await login(email, password);
       router.push(redirectPath);
+      router.refresh();
     } catch (err: any) {
       if (err.status === 429 || err.message?.toLowerCase().includes('too many')) {
         setError('Too many login attempts. Please try again in 15 minutes.');

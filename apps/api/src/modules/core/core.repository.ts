@@ -10,7 +10,7 @@ export class CoreRepository {
     let idx = 1;
 
     if (params.projectId) {
-      conditions.push(`(i.project_id = $${idx} OR i.project_id::text = $${idx})`);
+      conditions.push(`i.project_id::text = $${idx}`);
       values.push(params.projectId);
       idx++;
     }
@@ -22,13 +22,13 @@ export class CoreRepository {
     }
 
     if (params.sprintId) {
-      conditions.push(`(i.sprint_id = $${idx} OR i.sprint_id::text = $${idx})`);
+      conditions.push(`i.sprint_id::text = $${idx}`);
       values.push(params.sprintId);
       idx++;
     }
 
     if (params.assigneeId) {
-      conditions.push(`(i.assignee_id = $${idx} OR i.assignee_id::text = $${idx})`);
+      conditions.push(`i.assignee_id::text = $${idx}`);
       values.push(params.assigneeId);
       idx++;
     }
@@ -306,7 +306,7 @@ export class CoreRepository {
         status,
         created_at as "createdAt"
       FROM sprints
-      ${projectId ? 'WHERE project_id = $1 OR project_id::text = $1' : ''}
+      ${projectId ? 'WHERE project_id::text = $1' : ''}
       ORDER BY start_date ASC;
     `;
 
@@ -332,7 +332,7 @@ export class CoreRepository {
         c.created_at as "createdAt",
         c.updated_at as "updatedAt"
       FROM comments c
-      WHERE c.issue_id = $1 OR c.issue_id::text = $1
+      WHERE c.issue_id::text = $1
       ORDER BY c.created_at ASC;
     `;
 

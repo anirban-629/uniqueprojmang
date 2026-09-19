@@ -17,6 +17,60 @@ import {
   ListSessionsRoute,
 } from "./auth.types.js";
 
+function setAuthCookies(
+  reply: FastifyReply,
+  result: {
+    accessToken?: string;
+    refreshToken?: string;
+    user?: any;
+    tenant?: any;
+  },
+) {
+  const maxAge = 7 * 24 * 60 * 60; // 7 days in seconds
+  const isProd = process.env.NODE_ENV === "production";
+  const sameSite = isProd ? "None" : "Lax";
+  const secure = isProd;
+
+  if (result.accessToken) {
+    const cookies = [
+      `flowline_session=${result.accessToken}; Path=/; Max-Age=${maxAge}; HttpOnly; SameSite=${sameSite}${secure ? "; Secure" : ""}`,
+      `access_token=${result.accessToken}; Path=/; Max-Age=${maxAge}; SameSite=${sameSite}${secure ? "; Secure" : ""}`,
+      ...(result.refreshToken
+        ? [
+            `flowline_refresh=${result.refreshToken}; Path=/; Max-Age=${maxAge * 4}; HttpOnly; SameSite=${sameSite}${secure ? "; Secure" : ""}`,
+          ]
+        : []),
+      ...(result.user?.id
+        ? [
+            `flowline_user_id=${result.user.id}; Path=/; Max-Age=${maxAge}; SameSite=${sameSite}${secure ? "; Secure" : ""}`,
+          ]
+        : []),
+      ...(result.tenant?.slug || result.tenant?.id
+        ? [
+            `flowline_tenant_id=${result.tenant.slug || result.tenant.id}; Path=/; Max-Age=${maxAge}; SameSite=${sameSite}${secure ? "; Secure" : ""}`,
+          ]
+        : []),
+      ...(result.tenant?.role
+        ? [
+            `flowline_role=${result.tenant.role}; Path=/; Max-Age=${maxAge}; SameSite=${sameSite}${secure ? "; Secure" : ""}`,
+          ]
+        : []),
+    ];
+    reply.header("Set-Cookie", cookies);
+  }
+}
+
+function clearAuthCookies(reply: FastifyReply) {
+  reply.header("Set-Cookie", [
+    `flowline_session=; Path=/; Max-Age=0; HttpOnly`,
+    `access_token=; Path=/; Max-Age=0`,
+    `flowline_refresh=; Path=/; Max-Age=0; HttpOnly`,
+    `flowline_user_id=; Path=/; Max-Age=0`,
+    `flowline_tenant_id=; Path=/; Max-Age=0`,
+    `flowline_role=; Path=/; Max-Age=0`,
+  ]);
+}
+
 export async function register(
   request: FastifyRequest<RegisterRoute>,
   reply: FastifyReply,
@@ -25,6 +79,7 @@ export async function register(
     ip: request.ip,
     userAgent: request.headers["user-agent"],
   });
+  setAuthCookies(reply, result);
   return reply.status(201).send(result);
 }
 
@@ -36,6 +91,7 @@ export async function login(
     ip: request.ip,
     userAgent: request.headers["user-agent"],
   });
+  setAuthCookies(reply, result);
   return reply.status(200).send(result);
 }
 
@@ -47,9 +103,9 @@ export async function refresh(
     ip: request.ip,
     userAgent: request.headers["user-agent"],
   });
+  setAuthCookies(reply, result);
   return reply.status(200).send(result);
 }
-
 
 export async function switchTenant(
   request: FastifyRequest<SwitchTenantRoute>,
@@ -59,6 +115,7 @@ export async function switchTenant(
     request.companyTenant.userId,
     request.body.targetTenantId,
   );
+  setAuthCookies(reply, result);
   return reply.status(200).send(result);
 }
 
@@ -78,6 +135,7 @@ export async function acceptInvite(
   reply: FastifyReply,
 ) {
   const result = await authService.acceptInvite(request.body);
+  setAuthCookies(reply, result);
   return reply.status(200).send(result);
 }
 
@@ -118,11 +176,13 @@ export async function logout(
   const authHeader = request.headers.authorization;
   const refreshToken = request.body?.refreshToken;
   await authService.logout(authHeader, refreshToken);
+  clearAuthCookies(reply);
   return reply.status(200).send({ message: "Logged out successfully" });
 }
 
 export async function logoutAll(request: FastifyRequest, reply: FastifyReply) {
   await authService.logoutAll(request.companyTenant.userId);
+  clearAuthCookies(reply);
   return reply.status(200).send({ message: "All active sessions revoked" });
 }
 
