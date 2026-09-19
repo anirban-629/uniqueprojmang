@@ -349,3 +349,72 @@ export interface MemberRoleChangedEventPayload {
   projectId?: string;
 }
 
+// Unified Auth Request / Response DTOs
+export interface RegisterRequestPayload {
+  email: string;
+  password: string;
+  fullName: string;
+  organizationName: string;
+  organizationSlug?: string;
+  tenantName?: string; // Backward compatibility alias
+}
+
+export interface LoginRequestPayload {
+  email: string;
+  password: string;
+}
+
+export interface ResetPasswordRequestPayload {
+  token: string;
+  newPassword: string;
+}
+
+export interface ForgotPasswordRequestPayload {
+  email: string;
+}
+
+export interface SwitchTenantRequestPayload {
+  targetTenantId: string;
+}
+
+export interface InviteUserRequestPayload {
+  email: string;
+  role: TenantRole;
+}
+
+export interface AcceptInviteRequestPayload {
+  token: string;
+  password?: string;
+  fullName?: string;
+}
+
+export interface InviteDetailsResponse {
+  email: string;
+  role: TenantRole;
+  tenantName: string;
+  tenantSlug: string;
+  inviterName?: string;
+  expiresAt: string;
+  isValid: boolean;
+}
+
+export interface TenantMembershipDto {
+  tenantId: string;
+  companyId: string;
+  name: string;
+  slug: string;
+  role: TenantRole | string;
+}
+
+export interface AuthSessionResponse {
+  user: User | AuthUser;
+  tenant: {
+    userId: string;
+    tenantId: string;
+    companyId: string;
+    role: TenantRole | string;
+    permissions?: PermissionKey[] | string[];
+    email?: string;
+  };
+  memberships: TenantMembershipDto[];
+}

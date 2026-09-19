@@ -26,15 +26,15 @@ export function ForgotPasswordForm() {
   };
 
   return (
-    <Card className="w-full max-w-md border-slate-800/80 bg-slate-900/90 shadow-2xl backdrop-blur-xl">
+    <Card className="w-full max-w-md border-border bg-card/90 shadow-2xl backdrop-blur-xl">
       <CardHeader className="space-y-1 text-center">
-        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
           {submitted ? <CheckCircle2 className="h-6 w-6 text-emerald-400" /> : <Mail className="h-6 w-6" />}
         </div>
-        <CardTitle className="text-2xl font-bold text-slate-100">
+        <CardTitle className="text-2xl font-bold text-foreground">
           {submitted ? 'Check Your Inbox' : 'Reset Password'}
         </CardTitle>
-        <CardDescription className="text-slate-400">
+        <CardDescription className="text-muted-foreground">
           {submitted
             ? `If an account exists for ${email}, a password reset link has been dispatched.`
             : 'Enter your work email address and we will send you a reset link.'}
@@ -45,7 +45,7 @@ export function ForgotPasswordForm() {
           <div className="space-y-4">
             <Link
               href="/login"
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-500 transition-colors"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" /> Return to Login
             </Link>
@@ -53,7 +53,7 @@ export function ForgotPasswordForm() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-xs font-medium text-slate-300">Email Address</label>
+              <label className="text-xs font-medium text-foreground">Email Address</label>
               <div className="relative">
                 <Input
                   type="email"
@@ -63,18 +63,18 @@ export function ForgotPasswordForm() {
                   required
                   className="pl-9"
                 />
-                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               </div>
             </div>
 
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full justify-center bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-lg transition-all"
+              className="w-full justify-center bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 rounded-lg transition-all"
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                   Sending link...
                 </span>
               ) : (
@@ -84,8 +84,8 @@ export function ForgotPasswordForm() {
               )}
             </Button>
 
-            <div className="pt-2 text-center text-xs text-slate-400">
-              <Link href="/login" className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-200">
+            <div className="pt-2 text-center text-xs text-muted-foreground">
+              <Link href="/login" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
                 <ArrowLeft className="h-3 w-3" /> Back to Sign In
               </Link>
             </div>

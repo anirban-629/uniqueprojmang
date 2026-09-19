@@ -9,6 +9,9 @@ import {
   SwitchTenantRoute,
   InviteUserRoute,
   AcceptInviteRoute,
+  GetInviteDetailsRoute,
+  ForgotPasswordRoute,
+  ResetPasswordRoute,
   LogoutRoute,
   ListUsersRoute,
   GetCurrentUserRoute,
@@ -25,14 +28,18 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<RegisterRoute>('/api/auth/register', { schema: schemas.registerSchema }, controller.register);
   fastify.post<LoginRoute>('/api/auth/login', { schema: schemas.loginSchema }, controller.login);
   fastify.post<RefreshTokenRoute>('/api/auth/refresh', { schema: schemas.refreshSchema }, controller.refresh);
+  fastify.post<ForgotPasswordRoute>('/api/auth/forgot-password', { schema: schemas.forgotPasswordSchema }, controller.forgotPassword);
+  fastify.post<ResetPasswordRoute>('/api/auth/reset-password', { schema: schemas.resetPasswordSchema }, controller.resetPassword);
   fastify.post<LogoutRoute>('/api/auth/logout', { schema: schemas.logoutSchema }, controller.logout);
   fastify.post('/api/auth/logout-all', { schema: schemas.logoutAllSchema }, controller.logoutAll);
 
   // Multi-Tenancy & Workspace Operations
   fastify.post<SwitchTenantRoute>('/api/auth/switch-tenant', { schema: schemas.switchTenantSchema }, controller.switchTenant);
   fastify.post<InviteUserRoute>('/api/auth/invite', { schema: schemas.inviteUserSchema, preHandler: [requirePermission('invitations.create')] }, controller.inviteUser);
+  fastify.get<GetInviteDetailsRoute>('/api/auth/invite/:token', { schema: schemas.getInviteDetailsSchema }, controller.getInviteDetails);
   fastify.post<AcceptInviteRoute>('/api/auth/accept-invite', { schema: schemas.acceptInviteSchema }, controller.acceptInvite);
   fastify.get<ListSessionsRoute>('/api/auth/sessions', { schema: schemas.listSessionsSchema }, controller.listSessions);
+
 
   // RBAC Member & Role Management
   fastify.get<ListTenantMembersRoute>('/api/tenants/:tenantId/members', { schema: schemas.listTenantMembersSchema, preHandler: [requirePermission('members.view')] }, controller.listTenantMembers);

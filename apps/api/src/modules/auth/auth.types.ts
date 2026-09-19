@@ -22,7 +22,10 @@ export interface RegisterRequestDto {
   fullName: string;
   organizationName: string;
   organizationSlug?: string;
+  tenantName?: string;
+  tenantSlug?: string;
 }
+
 
 export interface LoginRequestDto {
   email: string;
@@ -134,6 +137,10 @@ export interface AcceptInviteRoute {
   Body: AcceptInviteRequestDto;
 }
 
+export interface GetInviteDetailsRoute {
+  Params: { token: string };
+}
+
 export interface ForgotPasswordRoute {
   Body: ForgotPasswordRequestDto;
 }
@@ -168,3 +175,4 @@ export interface RemoveMemberRoute {
 }
 
 export interface ListPermissionsRoute {}
+

@@ -183,10 +183,105 @@ Route Handlers in `app/api/*` simulate real-world constraints:
 
 ---
 
-## 10. Auth & Middleware at Scale
+## 10. Authentication & Multi-Tenant Frontend Architecture
 
-- Session validation happens in **Edge Middleware** (`middleware.ts`), not by hitting a database on every request.
-- Route groups: `(app)` requires auth, `(marketing)` doesn't — enforced in middleware via path matching.
+The frontend authentication system in `apps/web` is designed around user experience, enterprise security, and multi-tenant isolation. It establishes two distinct user journeys, an invisible session refresh loop, and soft email verification.
+
+### 10.1 Two Distinct User Entry Paths
+
+```mermaid
+flowchart TD
+    Start([Visitor arrives]) --> HasInvite{Has an invite link?}
+
+    HasInvite -->|Yes| InviteLanding["/invite?token=...<br/>Shows Org Name + Inviter + Role"]
+    HasInvite -->|No| Landing[Marketing / Landing Page]
+
+    Landing --> ChooseAction{Sign Up or Sign In?}
+    ChooseAction -->|Sign Up| Signup["/register<br/>4 Fields: Name, Email, Password, Org Name"]
+    ChooseAction -->|Sign In| Login["/login<br/>Email, Password"]
+
+    InviteLanding --> HasAccount{Already has<br/>an account?}
+    HasAccount -->|No| InviteSignup["New Member Form<br/>Pre-filled & locked email, password setup"]
+    HasAccount -->|Yes| InviteLogin["Existing Member Sign-In<br/>Auto-binds to inviting org"]
+
+    Signup --> CreateOrg["Creates NEW Tenant Workspace<br/>User assigned 'owner' role"]
+    InviteSignup --> JoinOrg["Joins EXISTING Tenant<br/>Assigned invited role (no new org)"]
+    InviteLogin --> JoinOrg
+
+    CreateOrg --> DirectEntry["Enters /board immediately<br/>(Soft verification banner shown)"]
+    JoinOrg --> DirectEntry
+
+    Login --> MultiTenantCheck{Belongs to<br/>multiple tenants?}
+    MultiTenantCheck -->|No| SingleEntry[Enters active tenant]
+    MultiTenantCheck -->|Yes| DefaultTenant["Restores last-visited workspace<br/>(Switchable via TenantSwitcher)"]
+```
+
+1. **Path A: New Workspace Creation (`/register`)**
+   - Streamlined to 4 input fields: `fullName`, `organizationName`, `email`, and `password` (minimum 10 characters).
+   - On submission, user is automatically logged in and dropped directly into `/board` as `owner` — no blocking verification screens.
+2. **Path B: Invite Acceptance (`/invite?token=...`)**
+   - Contextual header: *"[Inviter] invited you to join **[Org]** as **[Role]**"*.
+   - **New users:** Email field is locked and pre-filled. Sets password and joins the existing organization without creating a duplicate organization.
+   - **Existing users:** Simple sign-in to bind membership immediately.
+   - **Expired / Invalid tokens:** Clear fallback message prompting the user to request a fresh invite from their administrator.
+
+---
+
+### 10.2 Soft Email Verification Gate
+
+- Unverified users can explore the app immediately without signup abandonment.
+- A non-blocking `EmailVerificationBanner` is rendered in the top shell with a "Resend Email" action.
+- Only sensitive tenant actions (e.g., member invitations, billing settings) are gated until the email is confirmed.
+
+---
+
+### 10.3 Multi-Tenancy & Workspace Retention
+
+- Multi-tenant users are not forced through a redundant organization picker on every login. The client automatically restores the last active tenant (`flowline_last_tenant` in `localStorage`).
+- An in-shell `TenantSwitcher` dropdown in the `AppHeader` allows instant context switching and role inspection without page reloads.
+
+---
+
+### 10.4 Invisible Session Lifecycles & 401 Refresh Queue
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant UI as Client View / Component
+    participant Client as apiClient (apps/web)
+    participant API as Fastify Backend (apps/api)
+
+    UI->>Client: Fetch project resources
+    Client->>API: HTTP Request (Access Token Cookie)
+    API-->>Client: 401 Unauthorized (Access Token Expired)
+    Note over Client: Enqueue pending requests
+    Client->>API: POST /api/auth/refresh (httpOnly Refresh Token)
+    API-->>Client: 200 OK (Rotated Token Pair)
+    Note over Client: Drain pending request queue
+    Client->>API: Retry original requests with new token
+    API-->>Client: 200 OK (Resource Data)
+    Client-->>UI: Return fresh data
+```
+
+- Access tokens are short-lived (15 minutes).
+- `apps/web/lib/api/client.ts` intercepts HTTP 401 responses, queues concurrent requests, triggers token rotation via `POST /api/auth/refresh`, and seamlessly replays original requests without user disruption.
+- Explicit re-login is only required when the refresh token itself expires or is revoked.
+
+---
+
+### 10.5 Password Reset & Session Revocation
+
+- **Forgot Password (`/forgot-password`):** Enumeration-safe confirmation message regardless of whether the email exists.
+- **Reset Password (`/reset-password?token=...`):** Accepts `newPassword` (min 10 chars). Upon success, notifies the user that all active device sessions were revoked for security and redirects to `/login`.
+
+---
+
+### 10.6 Edge Route Protection & Declarative UI Guards
+
+- **Edge Middleware (`apps/web/middleware.ts`):** Evaluates session presence at the edge. Redirects unauthenticated requests to `/login?redirect=<target>` and authenticated traffic away from `/(auth)` routes.
+- **Declarative Guards:**
+  - `<RequireAuth>`: Ensures authenticated user state.
+  - `<RequirePermission permission="members.manage">`: Conditional rendering and permission enforcement based on user's resolved tenant and project roles.
 
 ---
 
@@ -200,12 +295,13 @@ Route Handlers in `app/api/*` simulate real-world constraints:
 ## 12. Build Order
 
 1. Turborepo scaffold: `apps/web`, `packages/types`, `packages/ui`, `packages/mock-db`
-2. Mock backend first: seed 50,000+ realistic issues, cursor-paginated Route Handlers
-3. Auth shell + Edge Middleware
-4. App shell: Server Component layout, route groups, navigation
+2. Mock backend & database migrations: seed realistic issues, permissions, and tenant roles
+3. Auth & Multi-Tenancy shell + Edge Middleware
+4. App shell: Server Component layout, route groups, navigation, `TenantSwitcher`, `EmailVerificationBanner`
 5. Board + Backlog with virtualization + optimistic updates
 6. Real-time: SSE Route Handler (Edge Runtime) + `useRealtimeUpdates` hook
 7. Issue Detail (Server + Client split)
 8. Reports (lazy-loaded charts)
 9. Automation, Dependency Graph, Weather Map, Decision Log
-10. Admin/Settings
+10. Admin & Workspace Settings
+
