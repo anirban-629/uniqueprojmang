@@ -17,7 +17,7 @@ declare module 'fastify' {
 
 const DEFAULT_TENANT_ID = 'acme-corp';
 const DEFAULT_COMPANY_ID = 'a0000000-0000-0000-0000-000000000001';
-const DEFAULT_USER_ID = 'u0000000-0000-0000-0000-000000000001';
+const DEFAULT_USER_ID = '10000000-0000-0000-0000-000000000001';
 
 const tenancyPluginAsync: FastifyPluginAsync = async (fastify) => {
   fastify.decorateRequest('companyTenant', {

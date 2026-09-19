@@ -85,10 +85,42 @@ export interface UpdateIssueRoute {
   Body: UpdateIssueDto;
 }
 
+export interface CreateProjectDto {
+  key: string;
+  name: string;
+  description?: string;
+  color?: string;
+  leadId?: string;
+}
+
+export interface GetProjectParamsDto {
+  id: string;
+}
+
+export interface CreateSprintDto {
+  projectId: string;
+  name: string;
+  goal?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 export interface ListProjectsRoute {}
+
+export interface GetProjectRoute {
+  Params: GetProjectParamsDto;
+}
+
+export interface CreateProjectRoute {
+  Body: CreateProjectDto;
+}
 
 export interface ListSprintsRoute {
   Querystring: ListSprintsQueryDto;
+}
+
+export interface CreateSprintRoute {
+  Body: CreateSprintDto;
 }
 
 export interface ListCommentsRoute {

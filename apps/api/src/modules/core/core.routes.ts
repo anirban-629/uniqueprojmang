@@ -7,7 +7,10 @@ import {
   CreateIssueRoute,
   UpdateIssueRoute,
   ListProjectsRoute,
+  GetProjectRoute,
+  CreateProjectRoute,
   ListSprintsRoute,
+  CreateSprintRoute,
   ListCommentsRoute,
   CreateCommentRoute,
   ListDecisionsRoute
@@ -22,9 +25,12 @@ export const coreRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Projects
   fastify.get<ListProjectsRoute>('/api/projects', { schema: schemas.listProjectsSchema }, controller.listProjects);
+  fastify.get<GetProjectRoute>('/api/projects/:id', { schema: schemas.getProjectSchema }, controller.getProjectById);
+  fastify.post<CreateProjectRoute>('/api/projects', { schema: schemas.createProjectSchema }, controller.createProject);
 
   // Sprints
   fastify.get<ListSprintsRoute>('/api/sprints', { schema: schemas.listSprintsSchema }, controller.listSprints);
+  fastify.post<CreateSprintRoute>('/api/sprints', { schema: schemas.createSprintSchema }, controller.createSprint);
 
   // Comments
   fastify.get<ListCommentsRoute>('/api/comments', { schema: schemas.listCommentsSchema }, controller.listComments);
