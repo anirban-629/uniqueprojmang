@@ -1,6 +1,7 @@
+import { randomUUID } from 'crypto';
 import { Issue, Project, Sprint, Comment, DecisionRecord, IssuesQueryParams, IssueStatus, IssuePriority, IssueType } from '@flowline/types';
 import { pool } from '../../db/client.js';
-import { CreateIssueDto, UpdateIssueDto } from './core.types.js';
+import { CreateIssueDto, UpdateIssueDto, CreateProjectDto, CreateSprintDto } from './core.types.js';
 
 export class CoreRepository {
   public async queryIssues(params: IssuesQueryParams): Promise<{ data: Issue[]; nextCursor: string | null }> {
@@ -10,7 +11,7 @@ export class CoreRepository {
     let idx = 1;
 
     if (params.projectId) {
-      conditions.push(`i.project_id::text = $${idx}`);
+      conditions.push(`(i.project_id::text = $${idx} OR LOWER(p_proj.key) = LOWER($${idx}))`);
       values.push(params.projectId);
       idx++;
     }
@@ -77,6 +78,7 @@ export class CoreRepository {
         i.created_at as "createdAt",
         i.updated_at as "updatedAt"
       FROM issues i
+      LEFT JOIN projects p_proj ON i.project_id = p_proj.id
       LEFT JOIN issue_statuses s ON i.status_id = s.id
       LEFT JOIN priorities p ON i.priority_id = p.id
       LEFT JOIN issue_types t ON i.issue_type_id = t.id
@@ -122,7 +124,7 @@ export class CoreRepository {
       LEFT JOIN issue_statuses s ON i.status_id = s.id
       LEFT JOIN priorities p ON i.priority_id = p.id
       LEFT JOIN issue_types t ON i.issue_type_id = t.id
-      WHERE ${isUuid ? 'i.id = $1 OR i.key = $1' : 'i.key = $1'}
+      WHERE ${isUuid ? 'i.id::text = $1 OR LOWER(i.key) = LOWER($1)' : 'LOWER(i.key) = LOWER($1)'}
       LIMIT 1;
     `;
 
@@ -137,7 +139,7 @@ export class CoreRepository {
   ): Promise<Issue> {
     // Resolve project, taxonomy, status, and priority IDs
     const projectRes = await pool.query(
-      'SELECT id, tenant_id FROM projects WHERE id = $1 OR key = $1 LIMIT 1;',
+      'SELECT id, tenant_id FROM projects WHERE id::text = $1 OR LOWER(key) = LOWER($1) LIMIT 1;',
       [data.projectId]
     );
     const projectId = projectRes.rows[0]?.id || data.projectId;
@@ -263,6 +265,112 @@ export class CoreRepository {
     return this.getIssueByIdOrKey(existing.id);
   }
 
+  public async createProject(
+    tenantId: string,
+    leadId: string,
+    data: CreateProjectDto
+  ): Promise<Project> {
+    const id = randomUUID();
+    const cleanKey = data.key.toUpperCase().trim();
+    const cleanName = data.name.trim();
+    const cleanDesc = data.description?.trim() || '';
+    const color = data.color || '#3B82F6';
+
+    let resolvedTenantId = tenantId;
+    const isTenantUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId || '');
+    if (!isTenantUuid) {
+      const tenantRes = await pool.query('SELECT id FROM tenants WHERE slug = $1 LIMIT 1;', [tenantId]);
+      resolvedTenantId = tenantRes.rows[0]?.id;
+      if (!resolvedTenantId) {
+        const firstTenant = await pool.query('SELECT id FROM tenants LIMIT 1;');
+        resolvedTenantId = firstTenant.rows[0]?.id || '00000000-0000-0000-0000-000000000001';
+      }
+    }
+
+    let resolvedLeadId = leadId;
+    const isLeadUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(leadId || '');
+    if (!isLeadUuid && leadId) {
+      const userRes = await pool.query('SELECT id FROM users LIMIT 1;');
+      resolvedLeadId = userRes.rows[0]?.id || null;
+    }
+
+    const insertProjectSql = `
+      INSERT INTO projects (id, tenant_id, key, name, description, lead_id)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, key, name, description, lead_id as "leadId", created_at as "createdAt";
+    `;
+
+    const res = await pool.query(insertProjectSql, [
+      id,
+      resolvedTenantId,
+      cleanKey,
+      cleanName,
+      cleanDesc,
+      resolvedLeadId || null
+    ]);
+
+    if (resolvedLeadId) {
+      await pool.query(
+        `INSERT INTO project_members (id, tenant_id, project_id, user_id, role)
+         VALUES ($1, $2, $3, $4, 'lead')
+         ON CONFLICT (project_id, user_id) DO NOTHING;`,
+        [randomUUID(), resolvedTenantId, id, resolvedLeadId]
+      );
+    }
+
+    await pool.query(
+      `INSERT INTO sprints (id, tenant_id, project_id, name, goal, status, start_date, end_date)
+       VALUES ($1, $2, $3, $4, $5, 'active', CURRENT_DATE, CURRENT_DATE + INTERVAL '14 days');`,
+      [randomUUID(), resolvedTenantId, id, 'Sprint 1', `${cleanName} Initial Sprint`]
+    );
+
+    return {
+      id: res.rows[0].id,
+      key: res.rows[0].key,
+      name: res.rows[0].name,
+      description: res.rows[0].description,
+      leadId: res.rows[0].leadId || '',
+      memberCount: 1,
+      color,
+      createdAt: res.rows[0].createdAt
+    };
+  }
+
+  public async getProjectByIdOrKey(idOrKey: string, tenantId?: string): Promise<Project | null> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrKey);
+    const sql = `
+      SELECT 
+        p.id,
+        p.key,
+        p.name,
+        COALESCE(p.description, '') as "description",
+        COALESCE(p.lead_id::text, '') as "leadId",
+        COUNT(pm.id)::int as "memberCount",
+        '#3B82F6' as "color",
+        p.created_at as "createdAt"
+      FROM projects p
+      LEFT JOIN project_members pm ON p.id = pm.project_id
+      WHERE (${isUuid ? 'p.id::text = $1 OR LOWER(p.key) = LOWER($1)' : 'LOWER(p.key) = LOWER($1)'})
+        ${tenantId ? 'AND p.tenant_id::text = $2' : ''}
+      GROUP BY p.id
+      LIMIT 1;
+    `;
+
+    const res = await pool.query(sql, tenantId ? [idOrKey, tenantId] : [idOrKey]);
+    if (!res.rows[0]) return null;
+    const r = res.rows[0];
+    return {
+      id: r.id,
+      key: r.key,
+      name: r.name,
+      description: r.description,
+      leadId: r.leadId || '',
+      memberCount: r.memberCount || 1,
+      color: r.color,
+      createdAt: r.createdAt
+    };
+  }
+
   public async getProjects(tenantId?: string): Promise<Project[]> {
     const sql = `
       SELECT 
@@ -270,13 +378,13 @@ export class CoreRepository {
         p.key,
         p.name,
         COALESCE(p.description, '') as "description",
-        p.lead_id as "leadId",
+        COALESCE(p.lead_id::text, '') as "leadId",
         COUNT(pm.id)::int as "memberCount",
         '#3B82F6' as "color",
         p.created_at as "createdAt"
       FROM projects p
       LEFT JOIN project_members pm ON p.id = pm.project_id
-      ${tenantId ? 'WHERE p.tenant_id = $1' : ''}
+      ${tenantId ? 'WHERE p.tenant_id::text = $1' : ''}
       GROUP BY p.id
       ORDER BY p.name ASC;
     `;
@@ -294,20 +402,62 @@ export class CoreRepository {
     }));
   }
 
+  public async createSprint(
+    tenantId: string,
+    data: CreateSprintDto
+  ): Promise<Sprint> {
+    const projectRes = await pool.query(
+      'SELECT id, tenant_id FROM projects WHERE id::text = $1 OR LOWER(key) = LOWER($1) LIMIT 1;',
+      [data.projectId]
+    );
+    const projectId = projectRes.rows[0]?.id || data.projectId;
+    const resolvedTenantId = projectRes.rows[0]?.tenant_id || tenantId;
+
+    const id = randomUUID();
+    const insertSql = `
+      INSERT INTO sprints (id, tenant_id, project_id, name, goal, status, start_date, end_date)
+      VALUES ($1, $2, $3, $4, $5, 'active', COALESCE($6::date, CURRENT_DATE), COALESCE($7::date, CURRENT_DATE + INTERVAL '14 days'))
+      RETURNING id, project_id as "projectId", name, COALESCE(goal, '') as "goal", 
+                start_date as "startDate", end_date as "endDate", status, created_at as "createdAt";
+    `;
+
+    const res = await pool.query(insertSql, [
+      id,
+      resolvedTenantId,
+      projectId,
+      data.name,
+      data.goal || '',
+      data.startDate || null,
+      data.endDate || null
+    ]);
+
+    const r = res.rows[0];
+    return {
+      id: r.id,
+      projectId: r.projectId,
+      name: r.name,
+      goal: r.goal,
+      startDate: r.startDate || new Date().toISOString(),
+      endDate: r.endDate || new Date().toISOString(),
+      status: r.status || 'active'
+    };
+  }
+
   public async getSprints(projectId?: string): Promise<Sprint[]> {
     const sql = `
       SELECT 
-        id,
-        project_id as "projectId",
-        name,
-        COALESCE(goal, '') as "goal",
-        start_date as "startDate",
-        end_date as "endDate",
-        status,
-        created_at as "createdAt"
-      FROM sprints
-      ${projectId ? 'WHERE project_id::text = $1' : ''}
-      ORDER BY start_date ASC;
+        s.id,
+        s.project_id as "projectId",
+        s.name,
+        COALESCE(s.goal, '') as "goal",
+        s.start_date as "startDate",
+        s.end_date as "endDate",
+        s.status,
+        s.created_at as "createdAt"
+      FROM sprints s
+      JOIN projects p ON s.project_id = p.id
+      ${projectId ? 'WHERE s.project_id::text = $1 OR LOWER(p.key) = LOWER($1)' : ''}
+      ORDER BY s.start_date ASC;
     `;
 
     const res = await pool.query(sql, projectId ? [projectId] : []);
@@ -322,7 +472,10 @@ export class CoreRepository {
     }));
   }
 
-  public async getComments(issueId: string): Promise<Comment[]> {
+  public async getComments(issueIdOrKey: string): Promise<Comment[]> {
+    const issue = await this.getIssueByIdOrKey(issueIdOrKey);
+    const resolvedId = issue ? issue.id : issueIdOrKey;
+
     const sql = `
       SELECT 
         c.id,
@@ -336,23 +489,40 @@ export class CoreRepository {
       ORDER BY c.created_at ASC;
     `;
 
-    const res = await pool.query(sql, [issueId]);
+    const res = await pool.query(sql, [resolvedId]);
     return res.rows;
   }
 
   public async addComment(
     tenantId: string,
-    issueId: string,
+    issueIdOrKey: string,
     authorId: string,
     body: string
   ): Promise<Comment> {
+    const issue = await this.getIssueByIdOrKey(issueIdOrKey);
+    const resolvedIssueId = issue ? issue.id : issueIdOrKey;
+
+    let resolvedTenantId = tenantId;
+    const isTenantUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId || '');
+    if (!isTenantUuid) {
+      const tenantRes = await pool.query('SELECT id FROM tenants WHERE slug = $1 LIMIT 1;', [tenantId]);
+      resolvedTenantId = tenantRes.rows[0]?.id || 'a0000000-0000-0000-0000-000000000001';
+    }
+
+    let resolvedAuthorId = authorId;
+    const isAuthorUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(authorId || '');
+    if (!isAuthorUuid) {
+      const userRes = await pool.query('SELECT id FROM users LIMIT 1;');
+      resolvedAuthorId = userRes.rows[0]?.id || '10000000-0000-0000-0000-000000000001';
+    }
+
     const insertSql = `
       INSERT INTO comments (tenant_id, issue_id, author_id, body)
       VALUES ($1, $2, $3, $4)
       RETURNING id, issue_id as "issueId", author_id as "authorId", body, created_at as "createdAt", updated_at as "updatedAt";
     `;
 
-    const res = await pool.query(insertSql, [tenantId, issueId, authorId, body]);
+    const res = await pool.query(insertSql, [resolvedTenantId, resolvedIssueId, resolvedAuthorId, body]);
     return res.rows[0];
   }
 

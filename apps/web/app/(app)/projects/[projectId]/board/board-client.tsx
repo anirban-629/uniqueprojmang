@@ -315,12 +315,13 @@ export function BoardClient({
     );
   };
 
-  const handleCreateIssue = (e: React.FormEvent) => {
+  const handleCreateIssue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
 
-    const newIssue: Issue = {
-      id: `iss-local-${Date.now()}`,
+    const tempId = `iss-local-${Date.now()}`;
+    const optimisticIssue: Issue = {
+      id: tempId,
       key: `${project.key}-${issues.length + 1}`,
       projectId: project.id,
       title: newTitle.trim(),
@@ -328,7 +329,7 @@ export function BoardClient({
       status: 'todo',
       priority: 'medium',
       type: 'story',
-      reporterId: 'usr-1',
+      reporterId: users[0]?.id || '10000000-0000-0000-0000-000000000001',
       sprintId: activeSprint?.id,
       storyPoints: 3,
       rank: `0|${Date.now()}:`,
@@ -337,16 +338,32 @@ export function BoardClient({
       updatedAt: new Date().toISOString()
     };
 
-    setIssues(prev => [newIssue, ...prev]);
+    setIssues(prev => [optimisticIssue, ...prev]);
     setNewTitle('');
     setIsNewIssueOpen(false);
 
-    // Persist to server
-    fetch('/api/issues', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newIssue)
-    });
+    try {
+      const res = await fetch('/api/issues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: project.id,
+          title: optimisticIssue.title,
+          description: optimisticIssue.description,
+          status: optimisticIssue.status,
+          priority: optimisticIssue.priority,
+          type: optimisticIssue.type,
+          sprintId: activeSprint?.id,
+          storyPoints: optimisticIssue.storyPoints
+        })
+      });
+      if (res.ok) {
+        const savedIssue: Issue = await res.json();
+        setIssues(prev => prev.map(i => (i.id === tempId ? savedIssue : i)));
+      }
+    } catch {
+      // Keep optimistic or handle error
+    }
   };
 
   return (

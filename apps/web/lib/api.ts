@@ -1,6 +1,9 @@
+import { cookies } from 'next/headers';
 import { 
   Project, 
+  CreateProjectPayload,
   Sprint, 
+  CreateSprintPayload,
   User, 
   Issue, 
   IssuesQueryParams, 
@@ -15,11 +18,20 @@ const API_BASE = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL
 
 async function fetchFromApi<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`;
+  let cookieHeader = '';
+  try {
+    const cookieStore = await cookies();
+    cookieHeader = cookieStore.toString();
+  } catch {
+    // Invoked in client component or outside request scope
+  }
+
   try {
     const res = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...(cookieHeader ? { Cookie: cookieHeader } : {}),
         ...(options?.headers || {})
       },
       cache: 'no-store'
@@ -44,12 +56,26 @@ export const apiClient = {
   },
 
   async getProject(id: string): Promise<Project | null> {
-    return await fetchFromApi<Project>(`/api/projects?id=${encodeURIComponent(id)}`);
+    return await fetchFromApi<Project>(`/api/projects/${encodeURIComponent(id)}`);
+  },
+
+  async createProject(payload: CreateProjectPayload): Promise<Project> {
+    return await fetchFromApi<Project>('/api/projects', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
   },
 
   async getSprints(projectId?: string): Promise<Sprint[]> {
     const data = await fetchFromApi<Sprint[]>(`/api/sprints${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ''}`);
     return Array.isArray(data) ? data : [];
+  },
+
+  async createSprint(payload: CreateSprintPayload): Promise<Sprint> {
+    return await fetchFromApi<Sprint>('/api/sprints', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
   },
 
   async getUsers(): Promise<User[]> {
@@ -77,9 +103,30 @@ export const apiClient = {
     return await fetchFromApi<Issue & { comments?: Comment[] }>(`/api/issues/${encodeURIComponent(id)}`);
   },
 
+  async createIssue(payload: any): Promise<Issue> {
+    return await fetchFromApi<Issue>('/api/issues', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async updateIssue(id: string, updates: any): Promise<Issue> {
+    return await fetchFromApi<Issue>(`/api/issues/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates)
+    });
+  },
+
   async getComments(issueId: string): Promise<Comment[]> {
     const data = await fetchFromApi<Comment[]>(`/api/comments?issueId=${encodeURIComponent(issueId)}`);
     return Array.isArray(data) ? data : [];
+  },
+
+  async addComment(issueId: string, body: string): Promise<Comment> {
+    return await fetchFromApi<Comment>('/api/comments', {
+      method: 'POST',
+      body: JSON.stringify({ issueId, body })
+    });
   },
 
   async getWeatherMapSummaries(): Promise<OrgWeatherMapSummary[]> {

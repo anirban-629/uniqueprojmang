@@ -25,6 +25,14 @@ export interface Project {
   createdAt: string;
 }
 
+export interface CreateProjectPayload {
+  key: string;
+  name: string;
+  description?: string;
+  color?: string;
+  leadId?: string;
+}
+
 export interface Sprint {
   id: string;
   projectId: string;
@@ -35,6 +43,14 @@ export interface Sprint {
   status: 'future' | 'active' | 'closed';
   totalPoints?: number;
   completedPoints?: number;
+}
+
+export interface CreateSprintPayload {
+  projectId: string;
+  name: string;
+  goal?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface Issue {

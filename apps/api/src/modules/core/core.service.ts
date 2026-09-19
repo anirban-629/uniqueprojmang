@@ -6,6 +6,8 @@ import {
   ListIssuesQueryDto,
   CreateIssueDto,
   UpdateIssueDto,
+  CreateProjectDto,
+  CreateSprintDto,
   PaginatedIssuesResponse
 } from './core.types.js';
 
@@ -80,6 +82,29 @@ export class CoreService {
 
   public async getProjects(tenantId?: string): Promise<Project[]> {
     return this.repository.getProjects(tenantId);
+  }
+
+  public async getProjectByIdOrKey(idOrKey: string, tenantId?: string): Promise<Project> {
+    const project = await this.repository.getProjectByIdOrKey(idOrKey, tenantId);
+    if (!project) {
+      throw new NotFoundError(`Project '${idOrKey}' not found`);
+    }
+    return project;
+  }
+
+  public async createProject(
+    tenantId: string,
+    leadId: string,
+    data: CreateProjectDto
+  ): Promise<Project> {
+    return this.repository.createProject(tenantId, leadId, data);
+  }
+
+  public async createSprint(
+    tenantId: string,
+    data: CreateSprintDto
+  ): Promise<Sprint> {
+    return this.repository.createSprint(tenantId, data);
   }
 
   public async getSprints(projectId?: string): Promise<Sprint[]> {

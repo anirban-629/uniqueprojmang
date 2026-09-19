@@ -21,11 +21,14 @@ export const dynamic = 'force-dynamic';
 // Server Component (Default)
 export default async function DashboardPage() {
   // Fetch from standalone backend API
-  const [projects, weather, sprints, decisions] = await Promise.all([
-    apiClient.getProjects(),
+  const projects = await apiClient.getProjects();
+  const activeProj = projects[0];
+  const activeProjId = activeProj?.id || 'proj-flow';
+
+  const [weather, sprints, decisions] = await Promise.all([
     apiClient.getWeatherMapSummaries(),
-    apiClient.getSprints('proj-flow'),
-    apiClient.getDecisions('proj-flow')
+    activeProj ? apiClient.getSprints(activeProjId) : Promise.resolve([]),
+    activeProj ? apiClient.getDecisions(activeProjId) : Promise.resolve([])
   ]);
   const activeSprint = sprints.find(s => s.status === 'active') || sprints[0];
 
@@ -45,16 +48,20 @@ export default async function DashboardPage() {
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Link href="/projects/proj-flow/board">
-              <Button variant="primary" size="default" className="gap-2">
-                <Kanban className="w-4 h-4" /> Open Active Board
-              </Button>
-            </Link>
-            <Link href="/projects/proj-flow/backlog">
-              <Button variant="outline" size="default" className="gap-2">
-                <ListTodo className="w-4 h-4" /> 50,000 Issue Backlog
-              </Button>
-            </Link>
+            {activeProj ? (
+              <>
+                <Link href={`/projects/${activeProj.id}/board`}>
+                  <Button variant="primary" size="default" className="gap-2">
+                    <Kanban className="w-4 h-4" /> Open Active Board
+                  </Button>
+                </Link>
+                <Link href={`/projects/${activeProj.id}/backlog`}>
+                  <Button variant="outline" size="default" className="gap-2">
+                    <ListTodo className="w-4 h-4" /> 50,000 Issue Backlog
+                  </Button>
+                </Link>
+              </>
+            ) : null}
             <Link href="/org/weather-map">
               <Button variant="secondary" size="default" className="gap-2">
                 <BarChart3 className="w-4 h-4" /> Org Weather Map

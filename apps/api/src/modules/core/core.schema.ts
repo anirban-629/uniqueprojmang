@@ -66,12 +66,54 @@ export const listProjectsSchema: FastifySchema = {
   summary: 'List Projects'
 };
 
+export const getProjectSchema: FastifySchema = {
+  tags: ['Core — Projects'],
+  summary: 'Get Project by ID or Key',
+  params: {
+    type: 'object',
+    properties: { id: { type: 'string' } },
+    required: ['id']
+  }
+};
+
+export const createProjectSchema: FastifySchema = {
+  tags: ['Core — Projects'],
+  summary: 'Create a New Project',
+  body: {
+    type: 'object',
+    required: ['name', 'key'],
+    properties: {
+      key: { type: 'string', minLength: 2, maxLength: 10 },
+      name: { type: 'string', minLength: 2, maxLength: 100 },
+      description: { type: 'string' },
+      color: { type: 'string' },
+      leadId: { type: 'string' }
+    }
+  }
+};
+
+export const createSprintSchema: FastifySchema = {
+  tags: ['Core — Sprints'],
+  summary: 'Create a Sprint',
+  body: {
+    type: 'object',
+    required: ['projectId', 'name'],
+    properties: {
+      projectId: { type: 'string' },
+      name: { type: 'string' },
+      goal: { type: 'string' },
+      startDate: { type: 'string' },
+      endDate: { type: 'string' }
+    }
+  }
+};
+
 export const listSprintsSchema: FastifySchema = {
   tags: ['Core — Sprints'],
   summary: 'List Sprints by Project',
   querystring: {
     type: 'object',
-    properties: { projectId: { type: 'string', default: 'proj-flow' } }
+    properties: { projectId: { type: 'string' } }
   }
 };
 

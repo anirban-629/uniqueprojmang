@@ -29,36 +29,64 @@ export function IssueDetailDrawer({
   onStatusChange
 }: IssueDetailDrawerProps) {
   const [newComment, setNewComment] = useState('');
-  const [localComments, setLocalComments] = useState<Comment[]>([
-    {
-      id: 'c1',
-      issueId: issue?.id || '',
-      authorId: 'usr-1',
-      body: 'Verified cursor slice against 50,000 in-memory items; query responded in 4ms.',
-      createdAt: new Date(Date.now() - 3600000).toISOString()
-    }
-  ]);
+  const [localComments, setLocalComments] = useState<Comment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+
+  React.useEffect(() => {
+    if (!issue?.id) return;
+    setLoadingComments(true);
+    fetch(`/api/comments?issueId=${issue.id}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        setLocalComments(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        setLocalComments([]);
+      })
+      .finally(() => {
+        setLoadingComments(false);
+      });
+  }, [issue?.id]);
 
   if (!issue) return null;
 
   const assignee = users.find(u => u.id === issue.assigneeId);
   const reporter = users.find(u => u.id === issue.reporterId);
 
-  const handleAddComment = (e: React.FormEvent) => {
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    const commentBody = newComment.trim();
+    if (!commentBody) return;
 
-    setLocalComments(prev => [
-      ...prev,
-      {
-        id: `c-${Date.now()}`,
-        issueId: issue.id,
-        authorId: 'usr-1',
-        body: newComment.trim(),
-        createdAt: new Date().toISOString()
-      }
-    ]);
+    const optimisticComment: Comment = {
+      id: `c-${Date.now()}`,
+      issueId: issue.id,
+      authorId: users[0]?.id || '10000000-0000-0000-0000-000000000001',
+      body: commentBody,
+      createdAt: new Date().toISOString()
+    };
+
+    setLocalComments(prev => [...prev, optimisticComment]);
     setNewComment('');
+
+    try {
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          issueId: issue.id,
+          body: commentBody
+        })
+      });
+      if (res.ok) {
+        const savedComment = await res.json();
+        setLocalComments(prev =>
+          prev.map(c => (c.id === optimisticComment.id ? savedComment : c))
+        );
+      }
+    } catch {
+      // Keep optimistic comment or rollback
+    }
   };
 
   return (
