@@ -37,6 +37,7 @@ export function RegisterForm() {
         password,
       });
       router.push('/board');
+      router.refresh();
     } catch (err: any) {
       setError(err.message || 'Failed to create workspace account');
     } finally {

@@ -24,7 +24,7 @@ export class AuthRepository {
              avatar_url as "avatarUrl", status, email_verified_at as "emailVerifiedAt", 
              mfa_secret as "mfaSecret", created_at as "createdAt", updated_at as "updatedAt"
       FROM users 
-      WHERE id = $1 OR id::text = $1
+      WHERE id::text = $1
       LIMIT 1;
     `;
     const res = await pool.query(query, [userId]);
@@ -68,7 +68,7 @@ export class AuthRepository {
   }
 
   public async findTenantById(tenantId: string): Promise<TenantRecord | null> {
-    const query = `SELECT id, name, slug, plan, created_at as "createdAt", updated_at as "updatedAt" FROM tenants WHERE id = $1 OR id::text = $1 LIMIT 1;`;
+    const query = `SELECT id, name, slug, plan, created_at as "createdAt", updated_at as "updatedAt" FROM tenants WHERE id::text = $1 LIMIT 1;`;
     const res = await pool.query(query, [tenantId]);
     return res.rows[0] || null;
   }
@@ -98,7 +98,7 @@ export class AuthRepository {
     const query = `
       SELECT id, tenant_id as "tenantId", user_id as "userId", role, status, joined_at as "joinedAt"
       FROM tenant_members
-      WHERE (tenant_id = $1 OR tenant_id::text = $1) AND (user_id = $2 OR user_id::text = $2)
+      WHERE tenant_id::text = $1 AND user_id::text = $2
       LIMIT 1;
     `;
     const res = await pool.query(query, [tenantId, userId]);
@@ -110,7 +110,7 @@ export class AuthRepository {
       SELECT tm.tenant_id as "tenantId", tm.tenant_id as "companyId", t.name, t.slug, tm.role
       FROM tenant_members tm
       JOIN tenants t ON t.id = tm.tenant_id
-      WHERE (tm.user_id = $1 OR tm.user_id::text = $1) AND tm.status = 'active';
+      WHERE tm.user_id::text = $1 AND tm.status = 'active';
     `;
     const res = await pool.query(query, [userId]);
     return res.rows;
@@ -156,7 +156,7 @@ export class AuthRepository {
   }
 
   public async markInvitationAccepted(id: string): Promise<void> {
-    await pool.query(`UPDATE invitations SET accepted_at = NOW() WHERE id = $1;`, [id]);
+    await pool.query(`UPDATE invitations SET accepted_at = NOW() WHERE id::text = $1;`, [id]);
   }
 
   public async writeAuditLog(params: {
@@ -190,7 +190,7 @@ export class AuthRepository {
       FROM tenant_members tm
       JOIN users u ON tm.user_id = u.id
       LEFT JOIN tenant_roles tr ON tm.tenant_role_id = tr.id
-      WHERE (tm.tenant_id = $1 OR tm.tenant_id::text = $1)
+      WHERE tm.tenant_id::text = $1
       ORDER BY tm.joined_at ASC;
     `;
     const res = await pool.query(query, [tenantId]);
@@ -202,7 +202,7 @@ export class AuthRepository {
       SELECT COUNT(*)::int as count
       FROM tenant_members tm
       LEFT JOIN tenant_roles tr ON tm.tenant_role_id = tr.id
-      WHERE (tm.tenant_id = $1 OR tm.tenant_id::text = $1)
+      WHERE tm.tenant_id::text = $1
         AND (LOWER(COALESCE(tr.name, tm.role)) = 'owner');
     `;
     const res = await pool.query(query, [tenantId]);
@@ -211,7 +211,7 @@ export class AuthRepository {
 
   public async updateMemberRole(tenantId: string, userId: string, newRole: TenantRole): Promise<void> {
     const roleRes = await pool.query(
-      `SELECT id FROM tenant_roles WHERE (tenant_id = $1 OR tenant_id IS NULL) AND name = $2 LIMIT 1;`,
+      `SELECT id FROM tenant_roles WHERE (tenant_id::text = $1 OR tenant_id IS NULL) AND name = $2 LIMIT 1;`,
       [tenantId, newRole]
     );
     const roleId = roleRes.rows[0]?.id || null;
@@ -219,14 +219,14 @@ export class AuthRepository {
     await pool.query(
       `UPDATE tenant_members 
        SET role = $1, tenant_role_id = $2 
-       WHERE (user_id = $3 OR user_id::text = $3) AND (tenant_id = $4 OR tenant_id::text = $4);`,
+       WHERE user_id::text = $3 AND tenant_id::text = $4;`,
       [newRole, roleId, userId, tenantId]
     );
   }
 
   public async removeTenantMember(tenantId: string, userId: string): Promise<void> {
     await pool.query(
-      `DELETE FROM tenant_members WHERE (user_id = $1 OR user_id::text = $1) AND (tenant_id = $2 OR tenant_id::text = $2);`,
+      `DELETE FROM tenant_members WHERE user_id::text = $1 AND tenant_id::text = $2;`,
       [userId, tenantId]
     );
   }

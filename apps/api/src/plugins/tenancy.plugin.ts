@@ -56,6 +56,13 @@ const tenancyPluginAsync: FastifyPluginAsync = async (fastify) => {
     const headerCompanyId = request.headers['x-company-id'] as string;
     const headerTenantId = (request.headers['x-tenant-id'] as string) || headerCompanyId;
     const authHeader = request.headers.authorization;
+    let cookieToken: string | undefined;
+    if (request.headers.cookie) {
+      const match = request.headers.cookie.match(/(?:flowline_session|access_token)=([^;]+)/);
+      if (match) {
+        cookieToken = decodeURIComponent(match[1]);
+      }
+    }
 
     let verifiedUserId: string | null = null;
     let verifiedTenantId: string | null = null;
@@ -64,8 +71,11 @@ const tenancyPluginAsync: FastifyPluginAsync = async (fastify) => {
     let isAuthenticated = false;
 
     // 2. JWT Verification
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7).trim();
+    const token = authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.substring(7).trim()
+      : cookieToken;
+
+    if (token) {
       try {
         const decoded = verifyAccessToken(token);
         verifiedUserId = decoded.sub;
@@ -74,7 +84,7 @@ const tenancyPluginAsync: FastifyPluginAsync = async (fastify) => {
         verifiedRole = decoded.role;
         isAuthenticated = true;
       } catch (err: any) {
-        request.log.debug({ err: err.message }, 'Bearer token verification failed or revoked');
+        request.log.debug({ err: err.message }, 'JWT token verification failed or revoked');
       }
     }
 
